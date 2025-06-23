@@ -166,7 +166,7 @@ type Permission struct {
 	Push     bool `json:"push"`     // required
 	Admin    bool `json:"admin"`    // required
 	Maintain bool `json:"maintain"` // required
-	triage   bool `json:"triage"`   // required
+	Triage   bool `json:"triage"`   // required
 }
 
 // Repository represents a GitHub repository.
