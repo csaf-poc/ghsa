@@ -1,0 +1,156 @@
+{
+  "ghsa_id": "GHSA-mh63-6h87-95cp",
+  "cve_id": "CVE-2025-30204",
+  "url": "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
+  "html_url": "https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp",
+  "summary": "Excessive memory allocation during header parsing",
+  "description": "### Summary\r\n\r\nFunction [`parse.ParseUnverified`](https://github.com/golang-jwt/jwt/blob/c035977d9e11c351f4c05dfeae193923cbab49ee/parser.go#L138-L139) currently splits (via a call to [strings.Split](https://pkg.go.dev/strings#Split)) its argument (which is untrusted data) on periods.\r\n\r\nAs a result, in the face of a malicious request whose _Authorization_ header consists of `Bearer ` followed by many period characters, a call to that function incurs allocations to the tune of O(n) bytes (where n stands for the length of the function's argument), with a constant factor of about 16. Relevant weakness: [CWE-405: Asymmetric Resource Consumption (Amplification)](https://cwe.mitre.org/data/definitions/405.html)\r\n\r\n### Details\r\n\r\nSee [`parse.ParseUnverified`](https://github.com/golang-jwt/jwt/blob/c035977d9e11c351f4c05dfeae193923cbab49ee/parser.go#L138-L139) \r\n\r\n### Impact\r\n\r\nExcessive memory allocation\r\n",
+  "severity": "high",
+  "author": null,
+  "publisher": {
+    "login": "oxisto",
+    "id": 12459061,
+    "node_id": "MDQ6VXNlcjEyNDU5MDYx",
+    "avatar_url": "https://avatars.githubusercontent.com/u/12459061?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/oxisto",
+    "html_url": "https://github.com/oxisto",
+    "followers_url": "https://api.github.com/users/oxisto/followers",
+    "following_url": "https://api.github.com/users/oxisto/following{/other_user}",
+    "gists_url": "https://api.github.com/users/oxisto/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/oxisto/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/oxisto/subscriptions",
+    "organizations_url": "https://api.github.com/users/oxisto/orgs",
+    "repos_url": "https://api.github.com/users/oxisto/repos",
+    "events_url": "https://api.github.com/users/oxisto/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/oxisto/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "identifiers": [
+    {
+      "value": "GHSA-mh63-6h87-95cp",
+      "type": "GHSA"
+    },
+    {
+      "value": "CVE-2025-30204",
+      "type": "CVE"
+    }
+  ],
+  "state": "published",
+  "created_at": null,
+  "updated_at": "2025-03-21T21:35:28Z",
+  "published_at": "2025-03-21T20:51:37Z",
+  "closed_at": null,
+  "withdrawn_at": null,
+  "submission": null,
+  "vulnerabilities": [
+    {
+      "package": {
+        "ecosystem": "go",
+        "name": "github.com/golang-jwt/jwt/v5"
+      },
+      "vulnerable_version_range": "<= 5.2.1",
+      "patched_versions": "5.2.2",
+      "vulnerable_functions": []
+    },
+    {
+      "package": {
+        "ecosystem": "go",
+        "name": "github.com/golang-jwt/jwt/v4"
+      },
+      "vulnerable_version_range": "<= 4.5.1",
+      "patched_versions": "4.5.2",
+      "vulnerable_functions": []
+    }
+  ],
+  "cvss_severities": {
+    "cvss_v3": {
+      "vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "score": 7.5
+    },
+    "cvss_v4": {
+      "vector_string": null,
+      "score": null
+    }
+  },
+  "cwes": [
+    {
+      "cwe_id": "CWE-405",
+      "name": "Asymmetric Resource Consumption (Amplification)"
+    }
+  ],
+  "cwe_ids": [
+    "CWE-405"
+  ],
+  "credits": [
+    {
+      "login": "jub0bs",
+      "type": "reporter"
+    },
+    {
+      "login": "Web-E",
+      "type": "reporter"
+    }
+  ],
+  "credits_detailed": [
+    {
+      "user": {
+        "login": "jub0bs",
+        "id": 52325150,
+        "node_id": "MDQ6VXNlcjUyMzI1MTUw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/52325150?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jub0bs",
+        "html_url": "https://github.com/jub0bs",
+        "followers_url": "https://api.github.com/users/jub0bs/followers",
+        "following_url": "https://api.github.com/users/jub0bs/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jub0bs/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jub0bs/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jub0bs/subscriptions",
+        "organizations_url": "https://api.github.com/users/jub0bs/orgs",
+        "repos_url": "https://api.github.com/users/jub0bs/repos",
+        "events_url": "https://api.github.com/users/jub0bs/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jub0bs/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "type": "reporter",
+      "state": "accepted"
+    },
+    {
+      "user": {
+        "login": "Web-E",
+        "id": 1003761,
+        "node_id": "MDQ6VXNlcjEwMDM3NjE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1003761?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Web-E",
+        "html_url": "https://github.com/Web-E",
+        "followers_url": "https://api.github.com/users/Web-E/followers",
+        "following_url": "https://api.github.com/users/Web-E/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Web-E/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Web-E/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Web-E/subscriptions",
+        "organizations_url": "https://api.github.com/users/Web-E/orgs",
+        "repos_url": "https://api.github.com/users/Web-E/repos",
+        "events_url": "https://api.github.com/users/Web-E/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Web-E/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "type": "reporter",
+      "state": "accepted"
+    }
+  ],
+  "collaborating_users": null,
+  "collaborating_teams": null,
+  "private_fork": null,
+  "cvss": {
+    "vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+    "score": 7.5
+  }
+}
