@@ -74,7 +74,6 @@ type CVSSSeverities struct {
 	CVSSv4 CVSS `json:"cvss_v4"`
 }
 
-// TODO(lebogg): Check if it exists in schema
 // CVSS represents a CVSS score
 type CVSS struct {
 	VectorString string  `json:"vector_string"` // required
