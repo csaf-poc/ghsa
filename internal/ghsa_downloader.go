@@ -15,7 +15,7 @@ import (
 // Browesr URL -> 	https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp
 const _ = "https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID"
 
-// TODO(lebogg): Implement
+// TODO(lebogg): Implement Tests
 func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
 	var jb map[string]interface{}
 
@@ -26,8 +26,8 @@ func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
 	}
 
 	resp, err := http.Get(url)
-	if err != nil {
-		err = fmt.Errorf("could not create request: %v", err)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("could not create request due to network error or status is not ok: error is '%v' and status code is '%s'", err, resp.Status)
 		return nil, err
 	}
 
@@ -43,7 +43,7 @@ func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
 	}
 	sb := string(body)
 	err = json.Unmarshal([]byte(sb), &jb)
-	prettyPrint(jb)
+	//prettyPrint(jb)
 	return ghsa, nil
 }
 

@@ -13,33 +13,75 @@ func TestDownloadGHSA(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		wantGhsa *ghsarepository.Advisory
-		wantErr  bool
+		wantGhsa assert.ValueAssertionFunc
+		wantErr  assert.ErrorAssertionFunc
 	}{
 		{
-			name: "Valid GHSA URL",
+			name: "Happy path: Valid GHSA URL",
 			args: args{
 				url: "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
 			},
-			wantGhsa: &ghsarepository.Advisory{
-				GhsaID: "GHSA-mh63-6h87-95cp",
-				CveID:  "CVE-2025-30204",
+			wantGhsa: func(t assert.TestingT, got interface{}, want ...interface{}) bool {
+				gotGhsa, ok := got.(*ghsarepository.Advisory)
+				if !ok {
+					t.Errorf("DownloadGHSA() got = %v, want *ghsarepository.Advisory", got)
+					return false
+				}
+				if wantID := "GHSA-mh63-6h87-95cp"; gotGhsa.GhsaID != wantID {
+					t.Errorf("DownloadGHSA() gotGhsa.GhsaID = '%v', want.GhsaID '%v'", gotGhsa.GhsaID, wantID)
+					return false
+				}
+				if wantCveId := "CVE-2025-30204"; gotGhsa.CveID != wantCveId {
+					t.Errorf("DownloadGHSA() gotGhsa.CveID = '%v', want.CveID '%v'", gotGhsa.CveID, wantCveId)
+					return false
+				}
+				return true
 			},
-			wantErr: false,
+			wantErr: assert.NoError,
+		},
+		{
+			name: "Err: Check URL fails",
+			args: args{
+				url: "https://api.gitlb.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
+			},
+			wantGhsa: func(t assert.TestingT, got interface{}, want ...interface{}) bool {
+				gotGhsa, ok := got.(*ghsarepository.Advisory)
+				if !ok {
+					t.Errorf("DownloadGHSA() got = %v, want *ghsarepository.Advisory", got)
+					return false
+				}
+				return gotGhsa == nil
+			},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.ErrorContains(t, err, "unsupported URL")
+			},
+		},
+		{
+			name: "Err: Get URL fails",
+			args: args{
+				url: "https://api.github.com/repos/golang-jwt/jwt/security-advisories/This-Is-Not-A-GHSA",
+			},
+			wantGhsa: func(t assert.TestingT, got interface{}, want ...interface{}) bool {
+				gotGhsa, ok := got.(*ghsarepository.Advisory)
+				if !ok {
+					t.Errorf("DownloadGHSA() got = %v, want *ghsarepository.Advisory", got)
+					return false
+				}
+				return gotGhsa == nil
+			},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.ErrorContains(t, err, "404 Not Found")
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotGhsa, err := DownloadGHSA(tt.args.url)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DownloadGHSA() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if !tt.wantErr(t, err) {
+				t.Error("Testing DownloadGHSA(): tt.wantErr() didn't run as expected") // TODO: Check error case
 			}
-			if gotID, wantID := gotGhsa.GhsaID, tt.wantGhsa.GhsaID; gotID != wantID {
-				t.Errorf("DownloadGHSA() gotGhsa.GhsaID = %v, want.GhsaID %v", gotGhsa.GhsaID, tt.wantGhsa.GhsaID)
-			}
-			if gotCVE, wantCVE := gotGhsa.CveID, tt.wantGhsa.CveID; gotCVE != wantCVE {
-				t.Errorf("DownloadGHSA() gotGhsa.CveID = %v, want.CveID %v", gotCVE, wantCVE)
+			if !tt.wantGhsa(t, gotGhsa) {
+				t.Error("Testing DownloadGHSA(): tt.wantGhsa() didn't run as expected") // TODO: Check error case
 			}
 		})
 	}
