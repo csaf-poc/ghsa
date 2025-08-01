@@ -15,7 +15,7 @@ import (
 // Browesr URL -> 	https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp
 const _ = "https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID"
 
-// TODO(lebogg): Implement Tests
+// DownloadGHSA downloads a GHSA from the given URL and returns a ghsarepository.Advisory
 func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
 	var jb map[string]interface{}
 
