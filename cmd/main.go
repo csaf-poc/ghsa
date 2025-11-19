@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/csaf-poc/ghsa/internal"
 	"os"
+
+	"github.com/csaf-poc/ghsa/internal"
 )
 
 // TODO(lebogg): Implement entrypoint: URL of GHSA as argument |
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	// Store CSAF
-	err = internal.StoreCSAF(*csaf)
+	err = internal.StoreCSAF(csaf)
 	if err != nil {
 		fmt.Printf("Error storing CSAF: %v\n", err)
 		os.Exit(1)
