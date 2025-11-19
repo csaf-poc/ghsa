@@ -28,18 +28,55 @@ func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
 }
 
 func getAcknowledgements(adv *repository.Advisory) *gocsaf.Acknowledgements {
-	var ack gocsaf.Acknowledgements
+	var (
+		ack gocsaf.Acknowledgements
+	)
+
 	// Add credited users
 	for _, credit := range adv.CreditsDetailed {
 		ack = append(ack, &gocsaf.Acknowledgement{
-			// Use ID because name is not required
+			// We use the login as a name because it is required and the full name may be empty
 			Names:        []*string{&credit.User.Login},
 			Organization: &credit.User.OrganizationsURL,
-			Summary:      nil, // Nothing found in GHSA w.r.t. credits
+			Summary:      creditTypeToSummary(credit.Type), // Nothing found in GHSA w.r.t. credits
 			URLs:         []*string{&credit.User.HTMLURL},
 		})
 	}
 	return &ack
+}
+
+// creditTypeToSummary returns a *string with a human-readable role description.
+// Nil is returned if no credit type is provided.
+func creditTypeToSummary(creditType string) (summary *string) {
+	var (
+		phrase string
+	)
+
+	// If no credit type is provided, return nil
+	if creditType == "" {
+		summary = nil
+		return
+	}
+
+	// Map credit type to human-readable phrase
+	switch creditType {
+	case "REPORTER", "FINDER":
+		phrase = "Reported the vulnerability"
+	case "ANALYZER":
+		phrase = "Analyzed impact"
+	case "FIXER":
+		phrase = "Provided the fix"
+	case "REVIEWER":
+		phrase = "Reviewed the fix"
+	case "COORDINATOR":
+		phrase = "Coordinated disclosure"
+	default:
+		// Fallback: use raw type
+		phrase = creditType
+	}
+	// Return the phrase as a *string
+	summary = &phrase
+	return
 }
 
 func getCategory(adv *repository.Advisory) *gocsaf.DocumentCategory {
