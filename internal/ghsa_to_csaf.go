@@ -24,13 +24,25 @@ func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
 		Title:             getTitle(adv),
 		Tracking:          nil,
 	}
-	return nil, nil
+	return
 }
 
+// getAcknowledgements converts GHSA detailed credits into CSAF acknowledgments.
+// Returns nil if no credits exist.
+// For each entry in adv.CreditsDetailed it creates one Acknowledgement:
+// \- Login used as Names (because full name may be absent)
+// \- OrganizationsURL as Organization
+// \- credit.Type mapped via creditTypeToSummary as Summary (nil if empty)
+// \- HTMLURL placed in URLs
+// No grouping is performed.
 func getAcknowledgements(adv *repository.Advisory) *gocsaf.Acknowledgements {
 	var (
 		ack gocsaf.Acknowledgements
 	)
+	// Return nil if no credits are provided
+	if len(adv.CreditsDetailed) == 0 {
+		return nil
+	}
 
 	// Add credited users
 	for _, credit := range adv.CreditsDetailed {
