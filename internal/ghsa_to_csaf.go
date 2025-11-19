@@ -21,7 +21,7 @@ func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
 		Publisher:         nil,
 		References:        nil,
 		SourceLang:        nil,
-		Title:             nil,
+		Title:             getTitle(adv),
 		Tracking:          nil,
 	}
 	return nil, nil
@@ -97,4 +97,11 @@ func getDistribution() *gocsaf.DocumentDistribution {
 		},
 	}
 	return &dist
+}
+
+func getTitle(adv *repository.Advisory) *string {
+	if adv.Summary == "" {
+		return nil
+	}
+	return &adv.Summary
 }
