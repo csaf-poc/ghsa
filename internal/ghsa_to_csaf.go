@@ -8,7 +8,8 @@ import (
 
 const documentCategory = "GitHub Security Advisory"
 
-// TODO(lebogg): Implement
+// TODO(lebogg): Fill out document
+// TODO(lebogg): Currently, we only provide the document but we do not provide the vulnerabilities -> return advisory
 func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
