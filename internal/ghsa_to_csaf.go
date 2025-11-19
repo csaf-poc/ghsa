@@ -17,7 +17,7 @@ func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
 		CSAFVersion:       getVersion(),
 		Distribution:      getDistribution(),
 		Lang:              getLang(adv), // no language info in GHSA, default to "en"
-		Notes:             nil,
+		Notes:             getNotes(adv),
 		Publisher:         nil,
 		References:        nil,
 		SourceLang:        nil,
@@ -120,6 +120,37 @@ func getLang(_ *repository.Advisory) (lang *gocsaf.Lang) {
 	)
 	l = "en"
 	lang = &l
+	return
+}
+
+func getNotes(adv *repository.Advisory) (notes gocsaf.Notes) {
+	var (
+		titleSummary        = "Summary"
+		categorySummary     = gocsaf.CSAFNoteCategorySummary
+		titleDescription    = "Description"
+		categoryDescription = gocsaf.CSAFNoteCategoryDescription
+	)
+	if adv == nil {
+		return
+	}
+
+	if adv.Summary != "" {
+		summaryNote := &gocsaf.Note{
+			NoteCategory: &categorySummary,
+			Text:         &adv.Summary,
+			Title:        &titleSummary,
+		}
+		notes = append(notes, summaryNote)
+
+	}
+	if adv.Description != "" {
+		descriptionNote := &gocsaf.Note{
+			NoteCategory: &categoryDescription,
+			Text:         &adv.Description,
+			Title:        &titleDescription,
+		}
+		notes = append(notes, descriptionNote)
+	}
 	return
 }
 
