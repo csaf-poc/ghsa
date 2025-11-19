@@ -16,7 +16,7 @@ func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
 		Category:          getCategory(),
 		CSAFVersion:       getVersion(),
 		Distribution:      getDistribution(),
-		Lang:              nil,
+		Lang:              getLang(adv), // no language info in GHSA, default to "en"
 		Notes:             nil,
 		Publisher:         nil,
 		References:        nil,
@@ -110,6 +110,17 @@ func getDistribution() *gocsaf.DocumentDistribution {
 		},
 	}
 	return &dist
+}
+
+// getLang extracts the default language as "en" for the given Advisory because GHSA does not provide language
+// information and on GitHub the common language is English.
+func getLang(_ *repository.Advisory) (lang *gocsaf.Lang) {
+	var (
+		l gocsaf.Lang
+	)
+	l = "en"
+	lang = &l
+	return
 }
 
 func getTitle(adv *repository.Advisory) *string {
