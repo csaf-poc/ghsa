@@ -1,9 +1,10 @@
 package internal
 
 import (
+	"testing"
+
 	ghsarepository "github.com/csaf-poc/ghsa/models/ghsa/repository"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestDownloadGHSA(t *testing.T) {
@@ -120,7 +121,7 @@ func TestCheckURL(t *testing.T) {
 			},
 			want: "",
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.Contains(t, err.Error(), "invalid API URL format")
+				return assert.Contains(t, err.Error(), "unsupported URL")
 			},
 		},
 		{
@@ -146,10 +147,10 @@ func TestCheckURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := checkURL(tt.args.urlStr)
+			got, err := normalizeGHSAURL(tt.args.urlStr)
 			tt.wantErr(t, err)
 			if got != tt.want {
-				t.Errorf("checkURL() got = %v, want %v", got, tt.want)
+				t.Errorf("normalizeGHSAURL() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
