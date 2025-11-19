@@ -13,7 +13,7 @@ func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
 		AggregateSeverity: nil, // n/a in GHSA
-		Category:          getCategory(adv),
+		Category:          getCategory(),
 		CSAFVersion:       getVersion(),
 		Distribution:      getDistribution(),
 		Lang:              nil,
@@ -38,8 +38,9 @@ func getAcknowledgements(adv *repository.Advisory) *gocsaf.Acknowledgements {
 			// We use the login as a name because it is required and the full name may be empty
 			Names:        []*string{&credit.User.Login},
 			Organization: &credit.User.OrganizationsURL,
-			Summary:      creditTypeToSummary(credit.Type), // Nothing found in GHSA w.r.t. credits
-			URLs:         []*string{&credit.User.HTMLURL},
+			// Use credit type as summary if available
+			Summary: creditTypeToSummary(credit.Type),
+			URLs:    []*string{&credit.User.HTMLURL},
 		})
 	}
 	return &ack
@@ -79,7 +80,7 @@ func creditTypeToSummary(creditType string) (summary *string) {
 	return
 }
 
-func getCategory(adv *repository.Advisory) *gocsaf.DocumentCategory {
+func getCategory() *gocsaf.DocumentCategory {
 	cat := gocsaf.DocumentCategory(documentCategory)
 	return &cat
 }
