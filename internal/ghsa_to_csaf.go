@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+
 	"github.com/csaf-poc/ghsa/models/csaf"
 	"github.com/csaf-poc/ghsa/models/ghsa/repository"
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
@@ -16,14 +18,24 @@ func ToCSAF(a *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
 	)
 
 	d, err = getDocument(a)
+	if err != nil {
+		err = fmt.Errorf("could not extract csaf document: %v", err)
+	}
 	pt, err = getProductTree(a)
+	if err != nil {
+		err = fmt.Errorf("could not extract csaf product tree: %v", err)
+	}
 	v, err = getVulnerabilities(a)
+	if err != nil {
+		err = fmt.Errorf("could not extract csaf vulnerabilities: %v", err)
+	}
 
 	csafadvisory = &csaf.Advisory{
 		Document:        d,
 		ProductTree:     pt,
 		Vulnerabilities: v,
 	}
+	return
 }
 
 // TODO(lebogg): Fill out document
@@ -44,6 +56,16 @@ func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 		Tracking:          nil,
 	}
 	return
+}
+
+// TODO(lebogg): Implement
+func getProductTree(a *repository.Advisory) (*csaf.ProductTree, error) {
+	panic("TODO")
+}
+
+// TODO(lebogg): Implement
+func getVulnerabilities(a *repository.Advisory) (csaf.Vulnerabilities, error) {
+	panic("TODO")
 }
 
 // getAcknowledgements converts GHSA detailed credits into CSAF acknowledgments.
