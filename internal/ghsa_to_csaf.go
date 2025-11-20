@@ -2,7 +2,9 @@ package internal
 
 import (
 	"fmt"
+	"sync/atomic"
 
+	"github.com/csaf-poc/ghsa/internal/utils"
 	"github.com/csaf-poc/ghsa/models/csaf"
 	"github.com/csaf-poc/ghsa/models/ghsa/repository"
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
@@ -223,8 +225,71 @@ func getTitle(adv *repository.Advisory) *string {
 }
 
 // TODO(lebogg): Implement
-func getTracking(adv *repository.Advisory) *gocsaf.Tracking {
-	panic("TODO")
+func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
+	var (
+		id = gocsaf.TrackingID(adv.GhsaID)
+	)
+
+	revisionHistory := getRevisionHistory(adv)
+
+	tracking = &gocsaf.Tracking{
+		Aliases: getAliases(adv.Identifiers),
+		// TODO(lebogg):  Check format (is ISO 8601)
+		CurrentReleaseDate: getCurrentReleaseDate(adv), // required
+		Generator:          nil,
+		ID:                 &id, // required
+		// TODO(lebogg):  Check format (is ISO 8601)
+		InitialReleaseDate: &adv.PublishedAt,                                             // required. Assumption: UpdatedAt doesn't represent release dates
+		RevisionHistory:    revisionHistory,                                              // required
+		Status:             utils.Ref(gocsaf.CSAFTrackingStatusFinal),                    // required. Assumption: GHSA is final
+		Version:            utils.Ref(gocsaf.RevisionNumber(rune(len(revisionHistory)))), // required
+	}
+	return
+
+}
+
+func getCurrentReleaseDate(adv *repository.Advisory) (current *string) {
+	if adv.UpdatedAt != "" && adv.UpdatedAt > adv.PublishedAt {
+		current = &adv.UpdatedAt
+		return
+	}
+	current = &adv.PublishedAt
+	return
+}
+
+func getAliases(identifiers []repository.Identifier) (aliases []*string) {
+	aliases = make([]*string, len(identifiers))
+	for i, id := range identifiers {
+		aliases[i] = &id.Value
+	}
+	return
+}
+
+// getRevisionHistory processes the advisory and returns its chronological revision history as a slice of revisions.
+// Note: GHSA does not provide a revision history, so we create one based on the publication date and the update date.
+func getRevisionHistory(adv *repository.Advisory) (revisions gocsaf.Revisions) {
+	var (
+		n = atomic.Int32{}
+	)
+	// Published
+	if adv.PublishedAt != "" {
+		revNumber := gocsaf.RevisionNumber(n.Add(1))
+		revisions = append(revisions, &gocsaf.Revision{
+			Date:    &adv.PublishedAt,
+			Number:  &revNumber,
+			Summary: utils.Ref("Advisory published"),
+		})
+	}
+	// Updated after publication (ISO 8601 strings are lexicographically sortable, so string comparison should work.)
+	if adv.UpdatedAt != "" && adv.UpdatedAt != adv.PublishedAt && adv.UpdatedAt > adv.PublishedAt {
+		revNumber := gocsaf.RevisionNumber(n.Add(1))
+		revisions = append(revisions, &gocsaf.Revision{
+			Date:    &adv.UpdatedAt,
+			Number:  &revNumber,
+			Summary: utils.Ref("Advisory updated"),
+		})
+	}
+	return
 }
 
 func provideContactInformation(u *repository.User) (contactInformation *string) {
@@ -239,4 +304,5 @@ func provideContactInformation(u *repository.User) (contactInformation *string) 
 	}
 
 	contactInformation = &info
+	return
 }

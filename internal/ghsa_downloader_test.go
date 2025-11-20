@@ -20,7 +20,7 @@ func TestDownloadGHSA(t *testing.T) {
 		{
 			name: "Happy path: Valid GHSA URL",
 			args: args{
-				url: "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
+				url: "https://github.com/esm-dev/esm.sh/security/advisories/GHSA-h3mw-4f23-gwpw",
 			},
 			wantGhsa: func(t assert.TestingT, got interface{}, want ...interface{}) bool {
 				gotGhsa, ok := got.(*ghsarepository.Advisory)
