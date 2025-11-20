@@ -59,12 +59,12 @@ func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 }
 
 // TODO(lebogg): Implement
-func getProductTree(a *repository.Advisory) (*csaf.ProductTree, error) {
+func getProductTree(_ *repository.Advisory) (*csaf.ProductTree, error) {
 	panic("TODO")
 }
 
 // TODO(lebogg): Implement
-func getVulnerabilities(a *repository.Advisory) (csaf.Vulnerabilities, error) {
+func getVulnerabilities(_ *repository.Advisory) (csaf.Vulnerabilities, error) {
 	panic("TODO")
 }
 
