@@ -40,8 +40,8 @@ func ToCSAF(a *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
 	return
 }
 
-// TODO(lebogg): Fill out document
-// TODO(lebogg): Check if all required fields are set!
+// TODO(lebogg): Test it
+// TODO(lebogg): Check if all required (sub) fields are set!
 // TODO(lebogg): For names we currently use login names because these are mandatory while names arent. BUT logins can change so maybe we should combine it with id (number)?
 // TODO(lebogg): Currently, we only provide the document but we do not provide the vulnerabilities -> return advisory
 func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
