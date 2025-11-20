@@ -8,9 +8,27 @@ import (
 
 const documentCategory = "GitHub Security Advisory"
 
+func ToCSAF(a *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
+	var (
+		d  *csaf.Document
+		pt *csaf.ProductTree
+		v  csaf.Vulnerabilities
+	)
+
+	d, err = getDocument(a)
+	pt, err = getProductTree(a)
+	v, err = getVulnerabilities(a)
+
+	csafadvisory = &csaf.Advisory{
+		Document:        d,
+		ProductTree:     pt,
+		Vulnerabilities: v,
+	}
+}
+
 // TODO(lebogg): Fill out document
 // TODO(lebogg): Currently, we only provide the document but we do not provide the vulnerabilities -> return advisory
-func ToCSAF(adv *repository.Advisory) (doc *csaf.Document, err error) {
+func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
 		AggregateSeverity: nil, // n/a in GHSA

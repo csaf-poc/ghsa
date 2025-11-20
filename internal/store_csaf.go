@@ -8,7 +8,7 @@ import (
 )
 
 // TODO(lebogg): Implement
-func StoreCSAF(csaf *csaf.Document) error {
+func StoreCSAF(_ *csaf.Advisory) error {
 	slog.Info("Not implemented yet")
 	return errors.New("not implemented yet")
 }
