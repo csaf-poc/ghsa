@@ -39,21 +39,23 @@ func ToCSAF(a *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
 }
 
 // TODO(lebogg): Fill out document
+// TODO(lebogg): Check if all required fields are set!
+// TODO(lebogg): For names we currently use login names because these are mandatory while names arent. BUT logins can change so maybe we should combine it with id (number)?
 // TODO(lebogg): Currently, we only provide the document but we do not provide the vulnerabilities -> return advisory
 func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
-		AggregateSeverity: nil, // n/a in GHSA
-		Category:          getCategory(),
-		CSAFVersion:       getVersion(),
+		AggregateSeverity: nil,           // n/a in GHSA
+		Category:          getCategory(), // required
+		CSAFVersion:       getVersion(),  // required
 		Distribution:      getDistribution(),
 		Lang:              getLang(adv), // no language info in GHSA, default to "en"
 		Notes:             getNotes(adv),
-		Publisher:         nil,
-		References:        nil,
-		SourceLang:        nil,
-		Title:             getTitle(adv),
-		Tracking:          nil,
+		Publisher:         getPublisher(&adv.Publisher), // required
+		References:        nil,                          // TODO(lebogg): Implement (optional)
+		SourceLang:        nil,                          // TODO(lebogg): Implement (optional)
+		Title:             getTitle(adv),                // required
+		Tracking:          getTracking(adv),             // required
 	}
 	return
 }
@@ -195,9 +197,46 @@ func getNotes(adv *repository.Advisory) (notes gocsaf.Notes) {
 	return
 }
 
+// TODO(lebogg): In the case of GHSA, is GH the publisher or the single persons/entities themselves?
+func getPublisher(ghsapublisher *repository.User) (p *gocsaf.DocumentPublisher) {
+	var (
+		category         = gocsaf.CSAFCategoryDiscoverer // TODO: Could also be others (if we are not sure)?
+		name             = ghsapublisher.Login           // We use Login because it is required while name isn't
+		issuingAuthority = "GitHub"                      // Assumption: GitHub is the issuing authority
+	)
+
+	p = &gocsaf.DocumentPublisher{
+		Category:         &category, // required
+		ContactDetails:   provideContactInformation(ghsapublisher),
+		IssuingAuthority: &issuingAuthority,
+		Name:             &name,                  // required
+		Namespace:        &ghsapublisher.HTMLURL, // required. Assumption: HTMLURL fulfills the namespace requirement
+	}
+	return
+}
+
 func getTitle(adv *repository.Advisory) *string {
 	if adv.Summary == "" {
 		return nil
 	}
 	return &adv.Summary
+}
+
+// TODO(lebogg): Implement
+func getTracking(adv *repository.Advisory) *gocsaf.Tracking {
+	panic("TODO")
+}
+
+func provideContactInformation(u *repository.User) (contactInformation *string) {
+	var (
+		info string
+	)
+	// First set HTML URL as URL because this is the place where profile information is shared publicly
+	info = "URL: " + u.HTMLURL
+	// Add email information if it is provided
+	if u.Email != "" {
+		info = info + "; email: " + u.Email
+	}
+
+	contactInformation = &info
 }
