@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/csaf-poc/ghsa/internal"
 	"github.com/csaf-poc/ghsa/models/csaf"
 	"github.com/csaf-poc/ghsa/models/ghsa/repository"
+	"github.com/csaf-poc/ghsa/service/converter"
+	"github.com/csaf-poc/ghsa/service/downloader"
+	"github.com/csaf-poc/ghsa/service/store"
 )
 
 // TODO(lebogg): Implement entrypoint: URL of GHSA as argument |
@@ -25,21 +27,21 @@ func main() {
 
 	// Get GHSA
 	ghsaURL := os.Args[1]
-	ghsa, err = internal.DownloadGHSA(ghsaURL)
+	ghsa, err = downloader.DownloadGHSA(ghsaURL)
 	if err != nil {
 		fmt.Printf("Error downloading GHSA: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Convert GHSA to CSAF
-	csafa, err = internal.ToCSAF(ghsa)
+	csafa, err = converter.ToCSAF(ghsa)
 	if err != nil {
 		fmt.Printf("Error converting GHSA to CSAF: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Store CSAF
-	err = internal.StoreCSAF(csafa)
+	err = store.StoreCSAF(csafa)
 	if err != nil {
 		fmt.Printf("Error storing CSAF: %v\n", err)
 		os.Exit(1)
