@@ -15,7 +15,7 @@ import (
 func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
-		AggregateSeverity: nil,                          // not required. n/a in GHSA
+		AggregateSeverity: getSeverity(adv),             // not required. n/a in GHSA
 		Category:          getCategory(),                // required
 		CSAFVersion:       getVersion(),                 // required
 		Distribution:      getDistribution(),            // not required
@@ -59,6 +59,14 @@ func getAcknowledgements(adv *repository.Advisory) *gocsaf.Acknowledgements {
 		})
 	}
 	return &ack
+}
+
+func getSeverity(adv *repository.Advisory) (s *gocsaf.AggregateSeverity) {
+	s = &gocsaf.AggregateSeverity{
+		Namespace: nil,                     // not required
+		Text:      utils.Ref(adv.Severity), // required
+	}
+	return
 }
 
 // creditTypeToSummary returns a *string with a human-readable role description.
