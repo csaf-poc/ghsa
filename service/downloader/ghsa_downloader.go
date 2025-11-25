@@ -88,12 +88,3 @@ func normalizeGHSAURL(ghsaURL string) (apiURL string, err error) {
 	err = fmt.Errorf("unsupported URL: %s. Expected `%s` or `%s`", ghsaURL, "https://github.com/OWNER/REPO/security/advisories/GHSA_ID", "https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID")
 	return
 }
-
-func prettyPrint(data interface{}) {
-	b, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	fmt.Println(string(b))
-}
