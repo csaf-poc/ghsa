@@ -24,7 +24,7 @@ func ToCSAF(a *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
 	if err != nil {
 		err = fmt.Errorf("could not extract csaf product tree: %v", err)
 	}
-	v, err = getVulnerabilities(a)
+	v, err = getVulnerabilities(a, pt)
 	if err != nil {
 		err = fmt.Errorf("could not extract csaf vulnerabilities: %v", err)
 	}

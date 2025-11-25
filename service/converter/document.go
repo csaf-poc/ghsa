@@ -135,32 +135,17 @@ func getLang(_ *repository.Advisory) (lang *gocsaf.Lang) {
 }
 
 func getNotes(adv *repository.Advisory) (notes gocsaf.Notes) {
-	var (
-		titleSummary        = "Summary"
-		categorySummary     = gocsaf.CSAFNoteCategorySummary
-		titleDescription    = "Description"
-		categoryDescription = gocsaf.CSAFNoteCategoryDescription
-	)
-	if adv == nil {
-		return
-	}
-
-	if adv.Summary != "" {
-		summaryNote := &gocsaf.Note{
-			NoteCategory: &categorySummary,
-			Text:         &adv.Summary,
-			Title:        &titleSummary,
-		}
-		notes = append(notes, summaryNote)
-
-	}
-	if adv.Description != "" {
-		descriptionNote := &gocsaf.Note{
-			NoteCategory: &categoryDescription,
-			Text:         &adv.Description,
-			Title:        &titleDescription,
-		}
-		notes = append(notes, descriptionNote)
+	notes = []*gocsaf.Note{
+		{
+			NoteCategory: utils.Ref(gocsaf.CSAFNoteCategorySummary),
+			Title:        utils.Ref("Summary"),
+			Text:         utils.Ref(adv.Summary),
+		},
+		{
+			NoteCategory: utils.Ref(gocsaf.CSAFNoteCategoryDescription),
+			Title:        utils.Ref("Description"),
+			Text:         utils.Ref(adv.Description),
+		},
 	}
 	return
 }
