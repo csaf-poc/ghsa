@@ -41,21 +41,20 @@ func ToCSAF(a *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
 }
 
 // TODO(lebogg): Test it
-// TODO(lebogg): Check if all required (sub) fields are set!
 // TODO(lebogg): For names we currently use login names because these are mandatory while names arent. BUT logins can change so maybe we should combine it with id (number)?
 // TODO(lebogg): Currently, we only provide the document but we do not provide the vulnerabilities -> return advisory
 func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
-		AggregateSeverity: nil,           // n/a in GHSA
-		Category:          getCategory(), // required
-		CSAFVersion:       getVersion(),  // required
-		Distribution:      getDistribution(),
-		Lang:              getLang(adv), // no language info in GHSA, default to "en"
-		Notes:             getNotes(adv),
+		AggregateSeverity: nil,                          // not required. n/a in GHSA
+		Category:          getCategory(),                // required
+		CSAFVersion:       getVersion(),                 // required
+		Distribution:      getDistribution(),            // not required
+		Lang:              getLang(adv),                 // not required. No language info in GHSA, default to "en"
+		Notes:             getNotes(adv),                // not required
 		Publisher:         getPublisher(&adv.Publisher), // required
-		References:        nil,                          // TODO(lebogg): Implement (optional)
-		SourceLang:        nil,                          // TODO(lebogg): Implement (optional)
+		References:        nil,                          // not required. TODO(lebogg): Implement (optional)
+		SourceLang:        nil,                          // not required. TODO(lebogg): Implement (optional)
 		Title:             getTitle(adv),                // required
 		Tracking:          getTracking(adv),             // required
 	}
@@ -158,7 +157,7 @@ func getDistribution() *gocsaf.DocumentDistribution {
 }
 
 // getLang extracts the default language as "en" for the given Advisory because GHSA does not provide language
-// information and on GitHub the common language is English.
+// information and on GitHub the common language is English. Because the `lang` field is optional, we could also omit it
 func getLang(_ *repository.Advisory) (lang *gocsaf.Lang) {
 	var (
 		l gocsaf.Lang
@@ -202,17 +201,17 @@ func getNotes(adv *repository.Advisory) (notes gocsaf.Notes) {
 // TODO(lebogg): In the case of GHSA, is GH the publisher or the single persons/entities themselves?
 func getPublisher(ghsapublisher *repository.User) (p *gocsaf.DocumentPublisher) {
 	var (
-		category         = gocsaf.CSAFCategoryDiscoverer // TODO: Could also be others (if we are not sure)?
+		category         = gocsaf.CSAFCategoryDiscoverer // TODO: Could also be "others" (if we are not sure)?
 		name             = ghsapublisher.Login           // We use Login because it is required while name isn't
 		issuingAuthority = "GitHub"                      // Assumption: GitHub is the issuing authority
 	)
 
 	p = &gocsaf.DocumentPublisher{
-		Category:         &category, // required
-		ContactDetails:   provideContactInformation(ghsapublisher),
-		IssuingAuthority: &issuingAuthority,
-		Name:             &name,                  // required
-		Namespace:        &ghsapublisher.HTMLURL, // required. Assumption: HTMLURL fulfills the namespace requirement
+		Category:         &category,                                // required
+		ContactDetails:   provideContactInformation(ghsapublisher), // not required
+		IssuingAuthority: &issuingAuthority,                        // not required
+		Name:             &name,                                    // required
+		Namespace:        &ghsapublisher.HTMLURL,                   // required. Assumption: HTMLURL fulfills the namespace requirement
 	}
 	return
 }
@@ -233,13 +232,11 @@ func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
 	revisionHistory := getRevisionHistory(adv)
 
 	tracking = &gocsaf.Tracking{
-		Aliases: getAliases(adv.Identifiers),
-		// TODO(lebogg):  Check format (is ISO 8601)
-		CurrentReleaseDate: getCurrentReleaseDate(adv), // required
-		Generator:          nil,
-		ID:                 &id, // required
-		// TODO(lebogg):  Check format (is ISO 8601)
-		InitialReleaseDate: &adv.PublishedAt,                                             // required. Assumption: UpdatedAt doesn't represent release dates
+		Aliases:            getAliases(adv.Identifiers),                                  // not required
+		CurrentReleaseDate: getCurrentReleaseDate(adv),                                   // required. TODO(lebogg):  Check format (is ISO 8601)
+		Generator:          nil,                                                          // not required
+		ID:                 &id,                                                          // required
+		InitialReleaseDate: &adv.PublishedAt,                                             // required. TODO(lebogg):  Check format (is ISO 8601)                                           // required. Assumption: UpdatedAt doesn't represent release dates
 		RevisionHistory:    revisionHistory,                                              // required
 		Status:             utils.Ref(gocsaf.CSAFTrackingStatusFinal),                    // required. Assumption: GHSA is final
 		Version:            utils.Ref(gocsaf.RevisionNumber(rune(len(revisionHistory)))), // required
