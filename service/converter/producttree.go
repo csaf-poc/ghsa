@@ -20,8 +20,16 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 	if len(adv.Vulnerabilities) == 0 {
 		return nil, fmt.Errorf("no affected packages found in advisory")
 	}
-	var branches gocsaf.Branches
+	var (
+		branches     gocsaf.Branches
+		productNames gocsaf.FullProductNames
+	)
+
 	for _, v := range adv.Vulnerabilities {
+		productName := &gocsaf.FullProductName{
+			Name:      getRepositoryName(v.Package.Name),
+			ProductID: utils.Ref(gocsaf.ProductID(v.Package.Name)),
+		}
 		branch := &gocsaf.Branch{
 			// 1st) add ecosystem branch, 2nd) add product branch and 3rd) add version range
 			// Note: CSAF only allows a branch to EITHER have a branch OR a product
@@ -37,11 +45,8 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 							Branches: []*gocsaf.Branch{
 								{
 									Category: utils.Ref(gocsaf.CSAFBranchCategoryProductVersionRange),
-									Name:     utils.Ref(v.VulnerableVersionRange),
-									Product: &gocsaf.FullProductName{
-										Name:      getRepositoryName(v.Package.Name),
-										ProductID: utils.Ref(gocsaf.ProductID(v.Package.Name)),
-									},
+									Name:     utils.Ref(normalizeOperators(v.VulnerableVersionRange)),
+									Product:  productName,
 								},
 							},
 						},
@@ -50,8 +55,12 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 			},
 		}
 		branches = append(branches, branch)
+		productNames = append(productNames, productName)
 	}
-	pt = &gocsaf.ProductTree{Branches: branches}
+	pt = &gocsaf.ProductTree{
+		Branches:         branches,
+		FullProductNames: utils.Ref(productNames),
+	}
 	return
 }
 
@@ -66,4 +75,20 @@ func getRepositoryName(packageName string) *string {
 		// If split is too small, we just return the whole package name.
 		return utils.Ref(packageName)
 	}
+}
+
+// normalizeOperators replaces ASCII operators to avoid '<'/'>' HTML escapes, like "\u003".
+// Note: We cannot touch the encoding of [gocsaf.SaveAdvisory]
+func normalizeOperators(r string) string {
+	r = strings.TrimSpace(r)
+
+	// Replace ASCII operators with Unicode equivalents
+	r = strings.ReplaceAll(r, "<= ", "≤ ")
+	r = strings.ReplaceAll(r, ">=", "≥ ")
+
+	// Replace strict < with a Unicode lookalike to avoid JSON escaping.
+	// WARNING: U+FE64 (﹤) is not ASCII '<' and may alter semantics for consumers expecting '<'.
+	r = strings.ReplaceAll(r, "<", "﹤")
+
+	return r
 }
