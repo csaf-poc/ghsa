@@ -73,3 +73,30 @@ the generation of these sections can be skipped or pruned in the future—yieldi
 | Tracking: Status             | n/a                                            | Required                                             | Fixed to `final`                                                                                                 |
 | Tracking: Version            | n/a                                            | Required                                             | Length of revision history (as decimal string)                                                                    |
 | Digital signatures           | n/a                                            | Optional signing metadata                            | Not populated                                                                                                    |
+
+### Product Tree
+| Aspect | GHSA Source | CSAF Expectation | Result / Handling / Assumption                                                                                                                                         |
+|--------|-------------|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Branch hierarchy | Ecosystem → package name → vulnerable range | Hierarchical branches | Implemented as `Language` → `ProductName` → `ProductVersionRange` → `Product`.                                                                                         |
+| Ecosystem category | `package.ecosystem` | Category label | Mapped to `Language` category. Assumption: `Language` comprises programming language. Other categories possible, e.g. Vendor if it is `GitHub` or the `Package Owner`. |
+| Product name display | `package.name` and repository path | Full product name | Derived via `getRepositoryName`: third path segment (e.g., `github.com/org/repo` → `repo`), fallback to full package name.                                             |
+| Product ID | `package.name` | Stable identifier | Use full package name as `product_id`.                                                                                                                                 |
+| Version range formatting | `vulnerable_version_range` | Clean canonical ranges | Whitespace normalized with operator replacement; `<` and `<=` may be substituted with Unicode lookalikes to avoid JSON HTML escaping (see `normalizeOperators`).       |
+| Multi-product relationships | Multiple packages per advisory | Cross-product mapping | Each package is a separate branch; no merging across packages.                                                                                                         |
+| Full product names | Consolidated list | `full_product_names[]` | Populated alongside branches for all products.                                                                                                                         |
+
+### Vulnerabilities
+| Aspect | GHSA Source | CSAF Expectation                | Result / Handling / Assumption |
+|--------|-------------|---------------------------------|-------------------|
+| Vulnerability count | Single advisory with multiple CWEs | One CWE per flaw                | Single CSAF Vulnerability generated; CWEs reduced to the first (primary) one to respect 1:1 CWE constraint. |
+| IDs | `ghsa_id` and `cve_id` | Multiple identifiers            | `IDs[]` includes GHSA ID; `CVE` set if provided. |
+| CWE mapping | `cwes[]` | One CWE per vulnerability       | Map first CWE (`id` and `name`), omit others. |
+| References | Advisory URL (`html_url`) | Typed references                | One external reference pointing to GHSA HTML page with summary "Advisory HTML URL". |
+| Product status | Affected packages | `known_affected`, `fixed`, etc. | All products derived from product tree marked as `KnownAffected`; no unaffected or fixed breakdown yet. |
+| Scores (CVSS) | `cvss_severities`, `cvss` legacy | CVSS3 with version              | Prefer CVSS v3.1/v3.0 vectors; legacy CVSS used if v3 absent; unsupported vectors are skipped. Severity derived from base score. |
+| Remediations | `patched_versions` per vulnerability | Remediation entries             | If patched versions exist, one `VendorFix` remediation with details "Upgrade to version: <versions>" and product IDs attached. |
+| Discovery / release dates | Not distinct in GHSA | Optional fields                 | Omitted; document tracking covers publish/update. |
+| Threats / VEX flags | Not present | Optional                        | Omitted. |
+| Notes / Title | Advisory-level text | Optional per-vuln               | Omitted to avoid duplication; document notes/title already describe the advisory. |
+
+Not performed: semantic rewriting of version operators, inference of missing ecosystem data, enrichment of vendor/product naming conventions beyond what GHSA provides.
