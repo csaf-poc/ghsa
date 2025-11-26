@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"strconv"
 	"sync/atomic"
 
 	"github.com/csaf-poc/ghsa/internal/utils"
@@ -184,14 +185,14 @@ func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
 	revisionHistory := getRevisionHistory(adv)
 
 	tracking = &gocsaf.Tracking{
-		Aliases:            getAliases(adv.Identifiers),                                  // not required
-		CurrentReleaseDate: getCurrentReleaseDate(adv),                                   // required. TODO(lebogg):  Check format (is ISO 8601)
-		Generator:          nil,                                                          // not required
-		ID:                 &id,                                                          // required
-		InitialReleaseDate: &adv.PublishedAt,                                             // required. TODO(lebogg):  Check format (is ISO 8601)                                           // required. Assumption: UpdatedAt doesn't represent release dates
-		RevisionHistory:    revisionHistory,                                              // required
-		Status:             utils.Ref(gocsaf.CSAFTrackingStatusFinal),                    // required. Assumption: GHSA is final
-		Version:            utils.Ref(gocsaf.RevisionNumber(rune(len(revisionHistory)))), // required
+		Aliases:            getAliases(adv.Identifiers),                                          // not required
+		CurrentReleaseDate: getCurrentReleaseDate(adv),                                           // required. TODO(lebogg):  Check format (is ISO 8601)
+		Generator:          nil,                                                                  // not required
+		ID:                 &id,                                                                  // required
+		InitialReleaseDate: &adv.PublishedAt,                                                     // required. TODO(lebogg):  Check format (is ISO 8601)                                           // required. Assumption: UpdatedAt doesn't represent release dates
+		RevisionHistory:    revisionHistory,                                                      // required
+		Status:             utils.Ref(gocsaf.CSAFTrackingStatusFinal),                            // required. Assumption: GHSA is final
+		Version:            utils.Ref(gocsaf.RevisionNumber(strconv.Itoa(len(revisionHistory)))), // required
 	}
 	return
 
@@ -222,7 +223,7 @@ func getRevisionHistory(adv *repository.Advisory) (revisions gocsaf.Revisions) {
 	)
 	// Published
 	if adv.PublishedAt != "" {
-		revNumber := gocsaf.RevisionNumber(n.Add(1))
+		revNumber := gocsaf.RevisionNumber(strconv.Itoa(int(n.Add(1))))
 		revisions = append(revisions, &gocsaf.Revision{
 			Date:    &adv.PublishedAt,
 			Number:  &revNumber,
@@ -231,7 +232,7 @@ func getRevisionHistory(adv *repository.Advisory) (revisions gocsaf.Revisions) {
 	}
 	// Updated after publication (ISO 8601 strings are lexicographically sortable, so string comparison should work.)
 	if adv.UpdatedAt != "" && adv.UpdatedAt != adv.PublishedAt && adv.UpdatedAt > adv.PublishedAt {
-		revNumber := gocsaf.RevisionNumber(n.Add(1))
+		revNumber := gocsaf.RevisionNumber(strconv.Itoa(int(n.Add(1))))
 		revisions = append(revisions, &gocsaf.Revision{
 			Date:    &adv.UpdatedAt,
 			Number:  &revNumber,
