@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/csaf-poc/ghsa/models/csaf"
@@ -18,12 +19,7 @@ func main() {
 		csafa *csaf.Advisory
 		err   error
 	)
-
-	// Check arguments
-	if len(os.Args) != 2 {
-		fmt.Printf("Usage: %s <GHSA URL>\n", os.Args[0])
-		os.Exit(1)
-	}
+	checkInput()
 
 	// Get GHSA
 	ghsaURL := os.Args[1]
@@ -41,9 +37,25 @@ func main() {
 	}
 
 	// Store CSAF
-	err = store.StoreCSAF(csafa)
+	err = store.Save(csafa, os.Args[2])
 	if err != nil {
-		fmt.Printf("Error storing CSAF: %v\n", err)
+		fmt.Printf("Error saving CSAF: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// TODO(lebogg): fmt sometimes slower then following slog?
+func checkInput() {
+	if length := len(os.Args); length != 3 {
+		fmt.Printf("Usage: %s <GHSA_URL> <file_name>\n", os.Args[0])
+		switch length {
+		case 1:
+			slog.Info("Provided no arguments at all")
+		case 2:
+			slog.Info("Provided arguments", slog.Any("<GHSA_URL>", os.Args[1]))
+		default:
+			slog.Info("Provided too many arguments", slog.Any("Argument number", length-1))
+		}
 		os.Exit(1)
 	}
 }

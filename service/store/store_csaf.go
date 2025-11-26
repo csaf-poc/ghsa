@@ -1,14 +1,21 @@
 package store
 
 import (
-	"errors"
 	"log/slog"
 
 	"github.com/csaf-poc/ghsa/models/csaf"
+	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
-// TODO(lebogg): Implement
-func StoreCSAF(_ *csaf.Advisory) error {
-	slog.Info("Not implemented yet")
-	return errors.New("not implemented yet")
+// TODO(lebogg): Test
+func Save(adv *csaf.Advisory, fname string) (err error) {
+	slog.Info("Saving advisory",
+		slog.Any("CSAF advisory", adv), // TODO(lebogg): Check that this does not explode since too much info
+		slog.String("file name", fname))
+	err = gocsaf.SaveAdvisory(adv, fname)
+	if err != nil {
+		// We don't need to wrap err because it is used as is in main
+		return err
+	}
+	return
 }
