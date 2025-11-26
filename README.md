@@ -100,3 +100,104 @@ the generation of these sections can be skipped or pruned in the future—yieldi
 | Notes / Title | Advisory-level text | Optional per-vuln               | Omitted to avoid duplication; document notes/title already describe the advisory. |
 
 Not performed: semantic rewriting of version operators, inference of missing ecosystem data, enrichment of vendor/product naming conventions beyond what GHSA provides.
+
+---
+## Design and Workflow
+High-level pipeline:
+1. Input acquisition: GHSA advisory JSON loaded into internal model (`models/ghsa/...`).
+2. Conversion orchestrator (`service/converter/`) assembles CSAF structures.
+3. Product tree construction (`producttree.go`): branches categorized (language → product → version range → product instance).
+4. Vulnerability section (`vulnerabilities.go`): maps GHSA vulnerabilities, identifiers, scores, references.
+5. Revision history (`document.go`): timestamps converted into sequential revision numbers (fixed from earlier control character issue by using proper integer → string conversion).
+6. Tracking and metadata: populates minimal CSAF tracking fields from GHSA advisory context.
+7. Serialization: CSAF advisory saved (current path uses upstream library defaults; HTML escaping of `<` may appear as `\u003c`).
+
+Development notes:
+- Project layout mirrors responsibility (converter, downloader, store, models, schemas).
+- Utilities (`internal/utils/ref.go`) help with pointer/value wrapping to reduce noise when assembling CSAF structs.
+- Tests exist for product tree and downloader components to validate structure and basic behaviors.
+- Incremental enhancements can extend mapping coverage without breaking existing schema usage.
+
+---
+## Usage
+Prerequisites: Go ≥ 1.21.
+
+Install dependencies:
+```bash
+go mod download
+```
+
+Run converter (example):
+```bash
+go run ./cmd --input examples/repository_GHSA/GHSA-mh63-6h87-95cp.json --output out/csaf.json
+```
+(Adjust flags according to your actual command interface; example placeholders.)
+
+Inspect output:
+```bash
+cat out/csaf.json | jq '.'
+```
+
+---
+## Data Mapping (GHSA → CSAF)
+- GHSA advisory ID → `document.tracking.id` and vulnerability IDs list.
+- CVE (if present) → `vulnerabilities[].cve`.
+- Package ecosystem/name → Product tree branches.
+- Severity / CVSS → `vulnerabilities[].scores[]` with score type set appropriately.
+- References (URLs) → `vulnerabilities[].references[]`.
+- Published / Updated timestamps → `document.tracking.revision_history[]` entries.
+- Description / summary → `vulnerabilities[].notes[]` (if implemented; may be minimal).
+
+Unsupported or partially mapped:
+- Advisory aliases beyond CVE/GHSA ID (unless provided explicitly).
+- Rich supplier, distributor, and release channel metadata.
+- Full remediation guidance if GHSA lacks structured fix details.
+
+---
+## JSON Encoding Notes
+We rely on the upstream `gocsaf.SaveAdvisory` function to serialize the CSAF advisory.
+That helper internally creates its own `json.Encoder` with Go's default settings;
+we cannot inject `SetEscapeHTML(false)`.
+As a consequence characters `<`, `>`, and `&` are HTML‑escaped in the emitted JSON (e.g. `<` becomes `\u003c`).
+For version range fields this makes strict comparisons `<` and `<=` awkward.
+A temporary workaround implemented in the product tree construction (`normalizeOperators`) replaces operators with visually similar Unicode symbols (e.g. `<=` → `≤`, and `<` → `﹤`) to avoid the escape sequence.
+This avoids test failures based on raw string matching but comes with trade‑offs:
+it slightly alters the original advisory text, may surprise downstream tooling expecting ASCII operators,
+and introduces a semantic ambiguity for consumers performing naive parsing.
+A more robust long‑term solution would be either (a) bypassing `gocsaf.SaveAdvisory` and performing our own encoding with `enc.SetEscapeHTML(false)`, or (b) post‑processing.
+Until such a change is adopted, treat the substituted symbols purely as a presentation artifact and not a semantic transformation of the version constraints.
+
+---
+## Examples
+See `examples/` directory:
+- `global_GHSA/GHSA-cpj6-fhp6-mr6j.json` (global advisory input).
+- `repository_GHSA/GHSA-mh63-6h87-95cp.json` (repository advisory input).
+- `repository_GHSA/csaf_example_output.json` (sample converted CSAF output).
+
+You can diff the input vs. output to observe:
+- Product tree hierarchy creation.
+- Revision history entries.
+- Identifier and reference mappings.
+
+---
+## Troubleshooting
+| Symptom | Cause | Resolution |
+|---------|-------|-----------|
+| Escaped `<` in version range | Default JSON encoder HTML escape | Accept as-is or post-process; custom encoder if allowed. |
+| Missing product branches | Empty `vulnerabilities` list in GHSA | Validate input advisory content; ensure downloader acquired full data. |
+| Lost CVSS vector | GHSA advisory lacks CVSS | No remediation; CSAF will omit score. |
+| Unexpected whitespace in ranges | GHSA formatting quirks | Normalization collapses spaces automatically. |
+
+Logging: converter emits structured logs (via `slog`) for save operations; enable debug verbosity if expanding.
+
+---
+## Roadmap
+TODO
+
+---
+## License and Acknowledgments
+Licensed under the terms in `LICENSE` (refer to file). Built upon:
+- `github.com/gocsaf/csaf` for CSAF model structures.
+- GitHub Security Advisory data as source material.
+
+Contributions, issues, and suggestions are welcome.
