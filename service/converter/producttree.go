@@ -49,7 +49,7 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 				},
 			},
 		}
-		branches = append(pt.Branches, branch)
+		branches = append(branches, branch)
 	}
 	pt = &gocsaf.ProductTree{Branches: branches}
 	return
