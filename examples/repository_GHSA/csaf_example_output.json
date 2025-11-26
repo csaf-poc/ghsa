@@ -1,0 +1,177 @@
+{
+  "document": {
+    "aggregate_severity": {
+      "text": "high"
+    },
+    "category": "GitHub Security Advisory",
+    "csaf_version": "2.0",
+    "distribution": {
+      "tlp": {
+        "label": "WHITE"
+      }
+    },
+    "lang": "en",
+    "notes": [
+      {
+        "category": "summary",
+        "text": "Excessive memory allocation during header parsing",
+        "title": "Summary"
+      },
+      {
+        "category": "description",
+        "text": "### Summary\r\n\r\nFunction [`parse.ParseUnverified`](https://github.com/golang-jwt/jwt/blob/c035977d9e11c351f4c05dfeae193923cbab49ee/parser.go#L138-L139) currently splits (via a call to [strings.Split](https://pkg.go.dev/strings#Split)) its argument (which is untrusted data) on periods.\r\n\r\nAs a result, in the face of a malicious request whose _Authorization_ header consists of `Bearer ` followed by many period characters, a call to that function incurs allocations to the tune of O(n) bytes (where n stands for the length of the function's argument), with a constant factor of about 16. Relevant weakness: [CWE-405: Asymmetric Resource Consumption (Amplification)](https://cwe.mitre.org/data/definitions/405.html)\r\n\r\n### Details\r\n\r\nSee [`parse.ParseUnverified`](https://github.com/golang-jwt/jwt/blob/c035977d9e11c351f4c05dfeae193923cbab49ee/parser.go#L138-L139) \r\n\r\n### Impact\r\n\r\nExcessive memory allocation\r\n",
+        "title": "Description"
+      }
+    ],
+    "publisher": {
+      "category": "discoverer",
+      "contact_details": "URL: https://github.com/oxisto",
+      "issuing_authority": "GitHub",
+      "name": "oxisto",
+      "namespace": "https://github.com/oxisto"
+    },
+    "title": "Excessive memory allocation during header parsing",
+    "tracking": {
+      "aliases": [
+        "GHSA-mh63-6h87-95cp",
+        "CVE-2025-30204"
+      ],
+      "current_release_date": "2025-03-21T21:35:28Z",
+      "generator": null,
+      "id": "GHSA-mh63-6h87-95cp",
+      "initial_release_date": "2025-03-21T20:51:37Z",
+      "revision_history": [
+        {
+          "date": "2025-03-21T20:51:37Z",
+          "number": "1",
+          "summary": "Advisory published"
+        },
+        {
+          "date": "2025-03-21T21:35:28Z",
+          "number": "2",
+          "summary": "Advisory updated"
+        }
+      ],
+      "status": "final",
+      "version": "2"
+    }
+  },
+  "product_tree": {
+    "branches": [
+      {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "category": "product_version_range",
+                    "name": "≤ 5.2.1",
+                    "product": {
+                      "name": "jwt",
+                      "product_id": "github.com/golang-jwt/jwt/v5"
+                    }
+                  }
+                ],
+                "category": "product_name",
+                "name": "github.com/golang-jwt/jwt/v5"
+              }
+            ],
+            "category": null,
+            "name": null
+          }
+        ],
+        "category": "language",
+        "name": "go"
+      },
+      {
+        "branches": [
+          {
+            "branches": [
+              {
+                "branches": [
+                  {
+                    "category": "product_version_range",
+                    "name": "≤ 4.5.1",
+                    "product": {
+                      "name": "jwt",
+                      "product_id": "github.com/golang-jwt/jwt/v4"
+                    }
+                  }
+                ],
+                "category": "product_name",
+                "name": "github.com/golang-jwt/jwt/v4"
+              }
+            ],
+            "category": null,
+            "name": null
+          }
+        ],
+        "category": "language",
+        "name": "go"
+      }
+    ],
+    "full_product_names": [
+      {
+        "name": "jwt",
+        "product_id": "github.com/golang-jwt/jwt/v5"
+      },
+      {
+        "name": "jwt",
+        "product_id": "github.com/golang-jwt/jwt/v4"
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "cve": "CVE-2025-30204",
+      "cwe": {
+        "id": "CWE-405",
+        "name": "Asymmetric Resource Consumption (Amplification)"
+      },
+      "ids": [
+        {
+          "system_name": "GitHub Security Advisory",
+          "text": "GHSA-mh63-6h87-95cp"
+        }
+      ],
+      "product_status": {
+        "known_affected": [
+          "github.com/golang-jwt/jwt/v5",
+          "github.com/golang-jwt/jwt/v4"
+        ]
+      },
+      "references": [
+        {
+          "category": "external",
+          "summary": "Advisory HTML URL",
+          "url": "https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp"
+        }
+      ],
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "Upgrade to version: 5.2.2, 4.5.2",
+          "product_ids": [
+            "github.com/golang-jwt/jwt/v5",
+            "github.com/golang-jwt/jwt/v4"
+          ]
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "version": "3.1",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "baseScore": 7.5,
+            "baseSeverity": "HIGH"
+          },
+          "products": [
+            "github.com/golang-jwt/jwt/v5",
+            "github.com/golang-jwt/jwt/v4"
+          ]
+        }
+      ]
+    }
+  ]
+}
