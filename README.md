@@ -33,3 +33,43 @@ Value of the prototype:
 - Makes differences concrete by producing tangible CSAF documents from real GHSA examples.
 - Highlights where additional metadata or tooling would be required for a robust pipeline.
 - Serves as a foundation others can iterate on (fill gaps, strengthen mappings, add validation).
+
+### Optional Sections (Product Tree & Vulnerabilities)
+Both `product_tree` and `vulnerabilities` are optional in the CSAF 2.0 specification;
+a syntactically valid document can consist solely of the mandatory `document` section.
+For clarity and experimentation this prototype chooses to populate them when GHSA provides enough input.
+
+Heuristic choices applied, e.g. ecosystem becomes a top-level language/category branch.
+
+If these assumptions do not align with a consumer’s taxonomy strategy or introduce risk of misinterpretation,
+the generation of these sections can be skipped or pruned in the future—yielding a leaner CSAF advisory focused only on tracking metadata.
+
+---
+## Limitations and Differences
+
+### CSAF Document
+| Aspect                       | GHSA Source                                   | CSAF Expectation                                     | Result / Handling / Assumption                                                                                  |
+|------------------------------|-----------------------------------------------|------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| Acknowledgments              | `credits_detailed` entries                     | `acknowledgments[]` optional                         | Mapped per entry: Names = user.login, Organization = organizations_url, URLs = html_url, Summary via credit type |
+| Aggregate severity           | `severity` string                              | `aggregate_severity.text`                            | Direct mapping to `text`; `namespace` omitted                                                                   |
+| Category                     | n/a                                            | `document.category` required                         | Fixed constant from config (`Security Advisory`)                                                                 |
+| CSAF version                 | n/a                                            | `csaf_version` required                              | Fixed to CSAF 2.0                                                                                                |
+| Distribution (TLP)           | n/a                                            | `document.distribution`                              | Set TLP to White by default                                                                                      |
+| Language (`lang`)            | n/a                                            | Optional                                             | Default to `en` (GHSA does not provide language)                                                                 |
+| Notes                        | `summary`, `description`                       | Optional `notes[]`                                   | Two notes created: Summary + Description                                                                         |
+| Publisher: Category          | n/a                                            | Category (e.g., coordinator/discovery/other)         | Use `Discoverer`                                                                                                 |
+| Publisher: Issuing Authority | n/a                                            | Issuer                                               | Use `GitHub`                                                                                                     |
+| Publisher: Name              | `user.login`, `user.name`                      | Single name                                          | Use `login` because it is always set                                                                             |
+| Publisher: Namespace         | `user.html_url`                                | URI/namespace                                        | Use HTMLURL as namespace                                                                                         |
+| Publisher: Contact details   | `user.html_url`, optional `user.email`         | Optional contact string                              | Compose: `URL: <html_url>; email: <email>` if present                                                            |
+| References                   | URLs in GHSA body                              | Optional references array                            | Not populated                                                                                                 |
+| Source language              | n/a                                            | Optional                                             | Not populated                                                                                                    |
+| Title                        | `summary`                                      | Required                                             | Use `summary`; nil if empty                                                                                      |
+| Tracking: Aliases            | `identifiers[]`                                | Optional list                                        | Map all GHSA identifiers to aliases                                                                              |
+| Tracking: ID                 | `ghsa_id`                                      | Required                                             | Use GHSA ID                                                                                                      |
+| Tracking: Initial release    | `published_at`                                 | Required (ISO 8601)                                  | Use `published_at`                                                                                                |
+| Tracking: Current release    | `updated_at` if > `published_at`               | Required (ISO 8601)                                  | Use `updated_at` if newer, else `published_at`                                                                    |
+| Tracking: Revision history   | `published_at`, `updated_at`                   | Required                                             | Synthesized: 1 = published, 2 = updated (if newer); numbers via `strconv.Itoa`                                    |
+| Tracking: Status             | n/a                                            | Required                                             | Fixed to `final`                                                                                                 |
+| Tracking: Version            | n/a                                            | Required                                             | Length of revision history (as decimal string)                                                                    |
+| Digital signatures           | n/a                                            | Optional signing metadata                            | Not populated                                                                                                    |
