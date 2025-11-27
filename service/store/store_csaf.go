@@ -17,5 +17,9 @@ func Save(adv *csaf.Advisory, fname string) (err error) {
 		// We don't need to wrap err because it is used as is in main
 		return err
 	}
+	slog.Info("Saved advisory",
+		slog.Any("CSAF Document Title", utils.Deref(adv.Document.Title)),
+		slog.Any("Tracking ID", utils.Deref(adv.Document.Tracking.ID)),
+		slog.String("file name", fname))
 	return
 }

@@ -43,7 +43,7 @@ func main() {
 	}
 }
 
-// TODO(lebogg): Add issue: fmt sometimes slower then following slog?
+// TODO(lebogg): Add issue: fmt sometimes slower then following slog? Use slog for everything (to check if formatted string is possible)
 func checkInput() {
 	if length := len(os.Args); length != 3 {
 		fmt.Printf("Usage: %s <GHSA_URL> <file_name>\n", os.Args[0])
