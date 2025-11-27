@@ -7,7 +7,6 @@ import (
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
-// TODO(lebogg): Test
 func Save(adv *csaf.Advisory, fname string) (err error) {
 	slog.Info("Saving advisory",
 		slog.Any("CSAF advisory", adv), // TODO(lebogg): Check that this does not explode since too much info

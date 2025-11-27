@@ -6,7 +6,7 @@ import (
 
 // Advisory represents a global GitHub Security Advisory.
 // It was created with a global GHSA example (see GHSA-cpj6-fhp6-mr6j.json in examples).
-// TODO(lebogg): Check schema and use it
+// TODO: This is WIP. Check schema and use it as source of truth (check [repository.Advisory] for comparison)
 type Advisory struct {
 	ID                    string              `json:"ghsa_id"`
 	Credits               []Credit            `json:"credits"`

@@ -9,7 +9,6 @@ import (
 	"github.com/gocsaf/csaf/v3/csaf"
 )
 
-// TODO(lebogg): Implement
 // getVulnerabilities converts a GHSA Advisory into a CSAF Vulnerabilities list.
 //
 // Design Note on Vulnerability & CWE Mapping:

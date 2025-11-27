@@ -10,9 +10,7 @@ import (
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
-// TODO(lebogg): Test it
-// TODO(lebogg): For names we currently use login names because these are mandatory while names arent. BUT logins can change so maybe we should combine it with id (number)?
-// TODO(lebogg): Currently, we only provide the document but we do not provide the vulnerabilities -> return advisory
+// TODO(lebogg): Add issue: For names we currently use login names because these are mandatory while names arent. BUT logins can change so maybe we should combine it with id (number)?
 func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
