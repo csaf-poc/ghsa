@@ -1,9 +1,4 @@
 # GHSA to CSAF Advisory Converter
-<!-- TODOs:
-- Alternatives to REST API?
-- What is the purpose of this tool or why is it necessary?
-- 
--->
 This repository provides tooling to transform GitHub Security Advisories (GHSA) into Common Security Advisory Framework (CSAF) 2.0 advisories.
 Its primary focus is a converter that ingests GHSA JSON (from the GitHub API) and produces a valid CSAF advisory file.
 
@@ -195,6 +190,7 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 ---
 ## Roadmap
 - Fix issues
+- Perform extensive review
 - Check global GHSA
 - Check hidden GHSA (requires authentication probably)
 - Add CLI functionality & configuration options
