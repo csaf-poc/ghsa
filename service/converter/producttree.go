@@ -65,7 +65,6 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 
 // getRepositoryName gets the repository name out of the package name.
 // For example: "github.com/golang-jwt/jwt/v5" -> "jwt"
-// TODO(lebogg): Add Issue: Check if there are other GitHub URL constellations
 func getRepositoryName(packageName string) *string {
 	splits := strings.Split(packageName, "/")
 	if len(splits) > 2 {
