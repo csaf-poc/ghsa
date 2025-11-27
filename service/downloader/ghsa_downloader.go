@@ -30,7 +30,7 @@ func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
 	// Fetch the advisory from GitHub API
 	resp, err := http.Get(url)
 	if err != nil {
-		err = fmt.Errorf("could not create request due to network error: error is '%v' and status code is '%s'", err, resp.Status)
+		err = fmt.Errorf("could not create request due to network error: '%v'", err)
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
