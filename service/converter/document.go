@@ -174,7 +174,6 @@ func getTitle(adv *repository.Advisory) *string {
 	return &adv.Summary
 }
 
-// TODO(lebogg): Implement
 func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
 	var (
 		id = gocsaf.TrackingID(adv.GhsaID)
