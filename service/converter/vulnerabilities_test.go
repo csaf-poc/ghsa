@@ -1,9 +1,10 @@
 package converter
 
 import (
+	"testing"
+
 	"github.com/csaf-poc/ghsa/models/ghsa/repository"
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
-	"testing"
 )
 
 func Test_getCWE_and_getCVE(t *testing.T) {

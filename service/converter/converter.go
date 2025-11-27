@@ -10,6 +10,7 @@ import (
 
 const documentCategory = "GitHub Security Advisory"
 
+// ToCSAF converts a GHSA Advisory into a CSAF Advisory aggregating document, product tree and vulnerabilities.
 func ToCSAF(adv *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
 	var (
 		d  *csaf.Document

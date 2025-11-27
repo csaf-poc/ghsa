@@ -12,11 +12,7 @@ import (
 	ghsarepository "github.com/csaf-poc/ghsa/models/ghsa/repository"
 )
 
-// API -> 			https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp
-// Browser URL -> 	https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp
-const _ = "https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID"
-
-// DownloadGHSA fetches a GitHub Security Advisory from the provided URL.
+// DownloadGHSA fetches and unmarshals a GHSA advisory from a browser or API URL
 // It handles both browser and API URL formats, normalizes them to the API format,
 // makes an HTTP GET request, and unmarshals the JSON response into an Advisory struct.
 // Returns the Advisory or an error if normalization, network request, or unmarshaling fails.
@@ -56,7 +52,7 @@ func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
 	return ghsa, nil
 }
 
-// normalizeGHSAURL converts a GitHub Security Advisory URL to the standard API format.
+// normalizeGHSAURL converts a browser GHSA URL to its canonical API endpoint form
 // It accepts both browser URLs (github.com/OWNER/REPO/security/advisories/GHSA_ID)
 // and API URLs (api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID),
 // returning the normalized API URL format.

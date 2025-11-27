@@ -11,7 +11,8 @@ import (
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
-// getProductTree converts GHSA vulnerability information into a CSAF product tree.
+// getProductTree builds a CSAF product tree from GHSA vulnerabilities.
+// It converts GHSA vulnerability information into a CSAF product tree.
 // It builds a hierarchical structure: vendor -> product_name -> product_version_range
 // for each vulnerable package and version range in the advisory.
 func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) {
@@ -63,7 +64,7 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 	return
 }
 
-// getRepositoryName gets the repository name out of the package name.
+// getRepositoryName extracts repository name heuristically from package path.
 // For example: "github.com/golang-jwt/jwt/v5" -> "jwt"
 func getRepositoryName(packageName string) *string {
 	splits := strings.Split(packageName, "/")
@@ -75,7 +76,8 @@ func getRepositoryName(packageName string) *string {
 	}
 }
 
-// normalizeOperators replaces ASCII operators to avoid '<'/'>' HTML escapes, like "\u003".
+// normalizeOperators expands comparison operators to English phrases and normalizes spacing.
+// It replaces ASCII operators to avoid '<'/'>' HTML escapes, like "\u003".
 // Note: We cannot touch the encoding of [gocsaf.SaveAdvisory]
 func normalizeOperators(r string) string {
 	// Replace operators with phrases

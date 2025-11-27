@@ -10,6 +10,7 @@ import (
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
+// getDocument builds the CSAF Document section from a GHSA advisory
 func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
@@ -28,7 +29,7 @@ func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	return
 }
 
-// getAcknowledgements converts GHSA detailed credits into CSAF acknowledgments.
+// getAcknowledgements maps GHSA detailed credits to CSAF acknowledgments
 // Returns nil if no credits exist.
 // For each entry in adv.CreditsDetailed it creates one Acknowledgement:
 // \- Login used as Names (because full name may be absent)
@@ -59,6 +60,7 @@ func getAcknowledgements(adv *repository.Advisory) *gocsaf.Acknowledgements {
 	return &ack
 }
 
+// getSeverity creates AggregateSeverity from GHSA severity string
 func getSeverity(adv *repository.Advisory) (s *gocsaf.AggregateSeverity) {
 	s = &gocsaf.AggregateSeverity{
 		Namespace: nil,                     // not required
@@ -67,7 +69,7 @@ func getSeverity(adv *repository.Advisory) (s *gocsaf.AggregateSeverity) {
 	return
 }
 
-// creditTypeToSummary returns a *string with a human-readable role description.
+// creditTypeToSummary turns a GHSA credit type into a human-readable summary
 // Nil is returned if no credit type is provided.
 func creditTypeToSummary(creditType string) (summary *string) {
 	var (
@@ -101,16 +103,19 @@ func creditTypeToSummary(creditType string) (summary *string) {
 	return
 }
 
+// getCategory returns the fixed document category
 func getCategory() *gocsaf.DocumentCategory {
 	cat := gocsaf.DocumentCategory(documentCategory)
 	return &cat
 }
 
+// getVersion returns the CSAF specification version used
 func getVersion() *gocsaf.Version {
 	v := gocsaf.CSAFVersion20 // Currently only CSAF 2.0 is supported
 	return &v
 }
 
+// getDistribution returns a default TLP White distribution
 func getDistribution() *gocsaf.DocumentDistribution {
 	label := gocsaf.TLPLabel(gocsaf.TLPLabelWhite) // Default TLP label is White
 	dist := gocsaf.DocumentDistribution{
@@ -121,8 +126,7 @@ func getDistribution() *gocsaf.DocumentDistribution {
 	return &dist
 }
 
-// getLang extracts the default language as "en" for the given Advisory because GHSA does not provide language
-// information and on GitHub the common language is English. Because the `lang` field is optional, we could also omit it
+// getLang returns default language "en" (GHSA lacks language info)
 func getLang(_ *repository.Advisory) (lang *gocsaf.Lang) {
 	var (
 		l gocsaf.Lang
@@ -132,6 +136,7 @@ func getLang(_ *repository.Advisory) (lang *gocsaf.Lang) {
 	return
 }
 
+// getNotes builds summary and description notes from GHSA fields
 func getNotes(adv *repository.Advisory) (notes gocsaf.Notes) {
 	notes = []*gocsaf.Note{
 		{
@@ -148,6 +153,7 @@ func getNotes(adv *repository.Advisory) (notes gocsaf.Notes) {
 	return
 }
 
+// getPublisher maps GHSA publisher user to CSAF publisher metadata
 func getPublisher(ghsapublisher *repository.User) (p *gocsaf.DocumentPublisher) {
 	var (
 		category         = gocsaf.CSAFCategoryDiscoverer // Assumption: Discoverer is the correct publisher category
@@ -165,6 +171,7 @@ func getPublisher(ghsapublisher *repository.User) (p *gocsaf.DocumentPublisher) 
 	return
 }
 
+// getTitle returns advisory summary or nil if empty
 func getTitle(adv *repository.Advisory) *string {
 	if adv.Summary == "" {
 		return nil
@@ -172,6 +179,7 @@ func getTitle(adv *repository.Advisory) *string {
 	return &adv.Summary
 }
 
+// getTracking assembles tracking information including revision history
 func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
 	var (
 		id = gocsaf.TrackingID(adv.GhsaID)
@@ -193,6 +201,7 @@ func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
 
 }
 
+// getCurrentReleaseDate picks updated_at if newer else published_at
 func getCurrentReleaseDate(adv *repository.Advisory) (current *string) {
 	if adv.UpdatedAt != "" && adv.UpdatedAt > adv.PublishedAt {
 		current = &adv.UpdatedAt
@@ -202,6 +211,7 @@ func getCurrentReleaseDate(adv *repository.Advisory) (current *string) {
 	return
 }
 
+// getAliases converts GHSA identifiers to CSAF aliases slice
 func getAliases(identifiers []repository.Identifier) (aliases []*string) {
 	aliases = make([]*string, len(identifiers))
 	for i, id := range identifiers {
@@ -210,7 +220,7 @@ func getAliases(identifiers []repository.Identifier) (aliases []*string) {
 	return
 }
 
-// getRevisionHistory processes the advisory and returns its chronological revision history as a slice of revisions.
+// getRevisionHistory synthesizes revisions from publish and update timestamps
 // Note: GHSA does not provide a revision history, so we create one based on the publication date and the update date.
 func getRevisionHistory(adv *repository.Advisory) (revisions gocsaf.Revisions) {
 	var (
@@ -237,6 +247,7 @@ func getRevisionHistory(adv *repository.Advisory) (revisions gocsaf.Revisions) {
 	return
 }
 
+// provideContactInformation builds a contact string from user profile/email
 func provideContactInformation(u *repository.User) (contactInformation *string) {
 	var (
 		info string

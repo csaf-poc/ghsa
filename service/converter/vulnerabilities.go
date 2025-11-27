@@ -9,7 +9,7 @@ import (
 	"github.com/gocsaf/csaf/v3/csaf"
 )
 
-// getVulnerabilities converts a GHSA Advisory into a CSAF Vulnerabilities list.
+// getVulnerabilities creates a single CSAF vulnerability from a GHSA advisory (first CWE only)
 //
 // Design Note on Vulnerability & CWE Mapping:
 // A GHSA Advisory typically corresponds to a single CVE but may list multiple CWEs.
@@ -45,7 +45,7 @@ func getVulnerabilities(adv *repository.Advisory, pt *csaf.ProductTree) (vulnera
 	return
 }
 
-// getProductIDs returns a list of ProductIDs from the ProductTree.
+// getProductIDs extracts product IDs from the product tree
 func getProductIDs(pt *csaf.ProductTree) (products []*csaf.ProductID) {
 	for _, p := range *pt.FullProductNames {
 		products = append(products, p.ProductID)
@@ -53,7 +53,7 @@ func getProductIDs(pt *csaf.ProductTree) (products []*csaf.ProductID) {
 	return
 }
 
-// getReferences returns a list of references with one item referencing to the GHSA advisory HTML page.
+// getReferences returns a CSAF references slice with the advisory HTML page
 func getReferences(adv *repository.Advisory) (r csaf.References) {
 	r = []*csaf.Reference{
 		{
@@ -65,7 +65,7 @@ func getReferences(adv *repository.Advisory) (r csaf.References) {
 	return
 }
 
-// getProductStatusAndScores returns a ProductStatus and a list of Scores based on the GHSA advisory.
+// getProductStatusAndScores derives product status and optional CVSS scores
 func getProductStatusAndScores(adv *repository.Advisory, productIDs csaf.Products) (status *csaf.ProductStatus, scores []*csaf.Score) {
 	if len(productIDs) > 0 {
 		// We assume that all products associated with this advisory in the tree are "Known Affected"
@@ -83,7 +83,7 @@ func getProductStatusAndScores(adv *repository.Advisory, productIDs csaf.Product
 	return
 }
 
-// getVulnerabilityIDs returns a list of VulnerabilityIDs with one item referencing to the GHSA advisory ID.
+// getVulnerabilityIDs returns vulnerability IDs referencing the GHSA ID
 func getVulnerabilityIDs(adv *repository.Advisory) (ids csaf.VulnerabilityIDs) {
 	ids = []*csaf.VulnerabilityID{
 		{
@@ -94,8 +94,7 @@ func getVulnerabilityIDs(adv *repository.Advisory) (ids csaf.VulnerabilityIDs) {
 	return
 }
 
-// getCWE extracts CWE information from the GHSA advisory. We use the first CWE found in the list, assuming it is the
-// primary one (CSAF only provides one CWE per Vulnerability object).
+// getCWE maps the first GHSA CWE to CSAF CWE
 func getCWE(adv *repository.Advisory) (cwe *csaf.CWE) {
 	if len(adv.CWEs) > 0 {
 		// We map the first CWE found in the GHSA as the primary one
@@ -107,7 +106,7 @@ func getCWE(adv *repository.Advisory) (cwe *csaf.CWE) {
 	return
 }
 
-// getCVE extracts CVE information from the GHSA advisory.
+// getCVE returns the CVE identifier if present
 func getCVE(adv *repository.Advisory) (cve *csaf.CVE) {
 	if adv.CveID != "" {
 		cve = utils.Ref(csaf.CVE(adv.CveID))
@@ -115,7 +114,7 @@ func getCVE(adv *repository.Advisory) (cve *csaf.CVE) {
 	return
 }
 
-// convertScores converts the GHSA advisory scores into a CSAF Score object.
+// convertScores converts GHSA CVSS data into a CSAF Score (prefers CVSSv3)
 func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Score, error) {
 	// Prefer CVSS v3 from CVSSSeverities
 	var vector string
@@ -155,7 +154,7 @@ func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Sc
 	}, nil
 }
 
-// calculateSeverity returns the CVSS3 severity based on score.
+// calculateSeverity maps a numeric CVSS score to a severity string
 func calculateSeverity(score float64) csaf.CVSS3Severity {
 	switch {
 	case score >= 9.0:
@@ -171,7 +170,7 @@ func calculateSeverity(score float64) csaf.CVSS3Severity {
 	}
 }
 
-// getRemediations extracts patch information from the GHSA advisory.
+// getRemediations builds remediation entries using patched versions
 func getRemediations(adv *repository.Advisory, productIDs csaf.Products) csaf.Remediations {
 	var remediations csaf.Remediations
 	var patchedVersions []string

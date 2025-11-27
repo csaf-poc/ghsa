@@ -8,6 +8,7 @@ import (
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
+// Save writes the CSAF advisory to the given file name using gocsaf's encoder
 func Save(adv *csaf.Advisory, fname string) (err error) {
 	slog.Info("Saving advisory",
 		slog.Any("CSAF advisory", utils.Deref(adv.Document.Title)),
