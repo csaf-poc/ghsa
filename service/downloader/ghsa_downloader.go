@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,6 +21,8 @@ const _ = "https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID"
 // makes an HTTP GET request, and unmarshals the JSON response into an Advisory struct.
 // Returns the Advisory or an error if normalization, network request, or unmarshaling fails.
 func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
+	slog.Info("Downloading GitHub Security Advisory (GHSA)",
+		slog.String("URL", url))
 	// Normalize URL to standard API format (accepts both browser and API URLs)
 	url, err = normalizeGHSAURL(url)
 	if err != nil {
