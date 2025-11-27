@@ -78,15 +78,12 @@ func getRepositoryName(packageName string) *string {
 // normalizeOperators replaces ASCII operators to avoid '<'/'>' HTML escapes, like "\u003".
 // Note: We cannot touch the encoding of [gocsaf.SaveAdvisory]
 func normalizeOperators(r string) string {
+	// Replace operators with phrases
+	r = strings.ReplaceAll(r, "<=", " less or equal ")
+	r = strings.ReplaceAll(r, ">=", " greater or equal ")
+	r = strings.ReplaceAll(r, "<", " less than ")
+	r = strings.ReplaceAll(r, ">", " greater than ")
+
 	r = strings.TrimSpace(r)
-
-	// Replace ASCII operators with Unicode equivalents
-	r = strings.ReplaceAll(r, "<= ", "≤ ")
-	r = strings.ReplaceAll(r, ">=", "≥ ")
-
-	// Replace strict < with a Unicode lookalike to avoid JSON escaping.
-	// WARNING: U+FE64 (﹤) is not ASCII '<' and may alter semantics for consumers expecting '<'.
-	r = strings.ReplaceAll(r, "<", "﹤")
-
 	return r
 }

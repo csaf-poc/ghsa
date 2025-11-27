@@ -160,12 +160,14 @@ That helper internally creates its own `json.Encoder` with Go's default settings
 we cannot inject `SetEscapeHTML(false)`.
 As a consequence characters `<`, `>`, and `&` are HTML‑escaped in the emitted JSON (e.g. `<` becomes `\u003c`).
 For version range fields this makes strict comparisons `<` and `<=` awkward.
-A temporary workaround implemented in the product tree construction (`normalizeOperators`) replaces operators with visually similar Unicode symbols (e.g. `<=` → `≤`, and `<` → `﹤`) to avoid the escape sequence.
-This avoids test failures based on raw string matching but comes with trade‑offs:
-it slightly alters the original advisory text, may surprise downstream tooling expecting ASCII operators,
-and introduces a semantic ambiguity for consumers performing naive parsing.
-A more robust long‑term solution would be either (a) bypassing `gocsaf.SaveAdvisory` and performing our own encoding with `enc.SetEscapeHTML(false)`, or (b) post‑processing.
-Until such a change is adopted, treat the substituted symbols purely as a presentation artifact and not a semantic transformation of the version constraints.
+To keep output ASCII‑only and avoid escaped sequences without changing the encoder, the converter now normalizes operators into descriptive English phrases:
+- `<=` → `less or equal`
+- `>=` → `greater or equal`
+- `<` → `less than`
+- `>` → `greater than`
+- 
+This sidesteps HTML escaping while preserving the intended comparison semantics in a human‑readable form. The trade‑off is that downstream tooling expecting literal operators will need to adapt.
+A more robust long‑term solution would be either (a) bypassing `gocsaf.SaveAdvisory` and performing our own encoding with `enc.SetEscapeHTML(false)`, or (b) post‑processing the JSON to unescape these characters.
 
 ---
 ## Examples
@@ -192,7 +194,11 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 
 ---
 ## Roadmap
-TODO
+- Fix issues
+- Check global GHSA
+- Check hidden GHSA (requires authentication probably)
+- Add CLI functionality & configuration options
+- Add more tests & validation
 
 ---
 ## License and Acknowledgments

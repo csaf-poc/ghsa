@@ -35,3 +35,25 @@ func Test_getRepositoryName(t *testing.T) {
 		})
 	}
 }
+
+func Test_normalizeOperators(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		out  string
+	}{
+		{name: "attached <=", in: "<=5.2.1", out: "less or equal 5.2.1"},
+		{name: "attached >=", in: ">=1.0.0", out: "greater or equal 1.0.0"},
+		{name: "range both sides", in: "1.0.0<=2.0.0", out: "1.0.0 less or equal 2.0.0"},
+		{name: "mixed spaces", in: " <2.3.4  ", out: "less than 2.3.4"},
+		{name: "greater than", in: ">2.3.4", out: "greater than 2.3.4"},
+		{name: "no operators", in: "1.2.3", out: "1.2.3"},
+	}
+	for _, tc := range cases {
+		got := normalizeOperators(tc.in)
+		if got != tc.out {
+			// Show debug diff style
+			t.Errorf("normalizeOperators(%q) = %q, want %q", tc.in, got, tc.out)
+		}
+	}
+}
