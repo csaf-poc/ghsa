@@ -34,21 +34,19 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 			// 1st) add ecosystem branch, 2nd) add product branch and 3rd) add version range
 			// Note: CSAF only allows a branch to EITHER have a branch OR a product
 			// Assumption: Language also comprises programming languages
+			// The schema requires every branch to have a non-empty category (from the enum)
+			// and a non-empty name — so we never emit an intermediate "unnamed" branch like vendor.
 			Category: utils.Ref(gocsaf.CSAFBranchCategoryLanguage),
 			Name:     utils.Ref(v.Package.Ecosystem),
 			Branches: []*gocsaf.Branch{
 				{
+					Category: utils.Ref(gocsaf.CSAFBranchCategoryProductName),
+					Name:     utils.Ref(v.Package.Name),
 					Branches: []*gocsaf.Branch{
 						{
-							Category: utils.Ref(gocsaf.CSAFBranchCategoryProductName),
-							Name:     utils.Ref(v.Package.Name),
-							Branches: []*gocsaf.Branch{
-								{
-									Category: utils.Ref(gocsaf.CSAFBranchCategoryProductVersionRange),
-									Name:     utils.Ref(normalizeOperators(v.VulnerableVersionRange)),
-									Product:  productName,
-								},
-							},
+							Category: utils.Ref(gocsaf.CSAFBranchCategoryProductVersionRange),
+							Name:     utils.Ref(normalizeOperators(v.VulnerableVersionRange)),
+							Product:  productName,
 						},
 					},
 				},
