@@ -26,9 +26,12 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 	)
 
 	for _, v := range adv.Vulnerabilities {
+		// Include the version range in product_id so entries for the same package with
+		// different ranges stay distinct (product_id must be unique within the document).
+		productID := gocsaf.ProductID(v.Package.Name + ":" + v.VulnerableVersionRange)
 		productName := &gocsaf.FullProductName{
 			Name:      getRepositoryName(v.Package.Name),
-			ProductID: utils.Ref(gocsaf.ProductID(v.Package.Name)),
+			ProductID: utils.Ref(productID),
 		}
 		branch := &gocsaf.Branch{
 			// 1st) add ecosystem branch, 2nd) add product branch and 3rd) add version range
