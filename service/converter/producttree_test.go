@@ -17,14 +17,64 @@ func Test_getRepositoryName(t *testing.T) {
 		want *string
 	}{
 		{
-			name: "correct split",
+			name: "github with go semver suffix",
 			args: args{packageName: "github.com/golang-jwt/jwt/v5"},
 			want: utils.Ref("jwt"),
 		},
 		{
-			name: "Only one split",
+			name: "github without version suffix",
+			args: args{packageName: "github.com/foo/bar"},
+			want: utils.Ref("bar"),
+		},
+		{
+			name: "github with deep subpath",
+			args: args{packageName: "github.com/foo/bar/baz/qux"},
+			want: utils.Ref("bar"),
+		},
+		{
+			name: "gitlab returns full name (subgroups possible)",
+			args: args{packageName: "gitlab.com/foo/bar/v2"},
+			want: utils.Ref("gitlab.com/foo/bar/v2"),
+		},
+		{
+			name: "gitlab with subgroup returns full name",
+			args: args{packageName: "gitlab.com/group/subgroup/repo"},
+			want: utils.Ref("gitlab.com/group/subgroup/repo"),
+		},
+		{
+			name: "bitbucket",
+			args: args{packageName: "bitbucket.org/foo/bar"},
+			want: utils.Ref("bar"),
+		},
+		{
+			name: "github with only two segments returns full name",
 			args: args{packageName: "github.com/something"},
 			want: utils.Ref("github.com/something"),
+		},
+		{
+			name: "go vanity import returns full name",
+			args: args{packageName: "k8s.io/api"},
+			want: utils.Ref("k8s.io/api"),
+		},
+		{
+			name: "npm scoped package returns full name",
+			args: args{packageName: "@babel/core"},
+			want: utils.Ref("@babel/core"),
+		},
+		{
+			name: "composer package returns full name",
+			args: args{packageName: "symfony/http-foundation"},
+			want: utils.Ref("symfony/http-foundation"),
+		},
+		{
+			name: "npm bare package returns full name",
+			args: args{packageName: "react-router"},
+			want: utils.Ref("react-router"),
+		},
+		{
+			name: "maven coordinate returns full name",
+			args: args{packageName: "org.springframework:spring-core"},
+			want: utils.Ref("org.springframework:spring-core"),
 		},
 	}
 	for _, tt := range tests {

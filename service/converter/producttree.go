@@ -68,16 +68,33 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 	return
 }
 
-// getRepositoryName extracts repository name heuristically from package path.
-// For example: "github.com/golang-jwt/jwt/v5" -> "jwt"
+// flatVCSHostPrefixes lists VCS hosts whose repo URLs use a flat
+// <host>/<owner>/<repo>[/...] layout — i.e. the repo segment is always at
+// index 2. GitLab is deliberately excluded because it supports nested
+// subgroups (gitlab.com/group/subgroup/.../repo), so the repo boundary
+// cannot be inferred from the path alone.
+var flatVCSHostPrefixes = []string{
+	"github.com/",
+	"bitbucket.org/",
+}
+
+// getRepositoryName returns a short, human-readable product name for a GHSA
+// package. For Go module paths hosted on a flat-namespace VCS provider it
+// extracts the repo segment (e.g. "github.com/golang-jwt/jwt/v5" -> "jwt").
+// For all other package names — GitLab paths (subgroup depth is unknown),
+// Go vanity imports, and flat ecosystem identifiers (npm, PyPI, Maven,
+// Composer, ...) — the full name is returned unchanged.
 func getRepositoryName(packageName string) *string {
-	splits := strings.Split(packageName, "/")
-	if len(splits) > 2 {
-		return utils.Ref(splits[2])
-	} else {
-		// If split is too small, we just return the whole package name.
-		return utils.Ref(packageName)
+	for _, prefix := range flatVCSHostPrefixes {
+		if strings.HasPrefix(packageName, prefix) {
+			splits := strings.Split(packageName, "/")
+			if len(splits) > 2 {
+				return utils.Ref(splits[2])
+			}
+			break
+		}
 	}
+	return utils.Ref(packageName)
 }
 
 // normalizeOperators expands comparison operators to English phrases and normalizes spacing.
