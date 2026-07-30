@@ -117,20 +117,29 @@ Development notes:
 ## Usage
 Prerequisites: Go ≥ 1.21.
 
-Install dependencies:
+Run converter:
 ```bash
-go mod download
+go run ./cmd <GHSA_URL> <output_file>
 ```
 
-Run converter (example):
+`<GHSA_URL>` is a live GitHub Security Advisory URL — the converter fetches it over HTTP.
+Both formats are accepted:
+- Browser: `https://github.com/OWNER/REPO/security/advisories/GHSA-XXXX-XXXX-XXXX`
+- API:     `https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA-XXXX-XXXX-XXXX`
+
+Example:
 ```bash
-go run ./cmd --input examples/repository_GHSA/GHSA-mh63-6h87-95cp.json --output out/csaf.json
+go run ./cmd https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp out.json
 ```
-(Adjust flags according to your actual command interface; example placeholders.)
 
 Inspect output:
 ```bash
-cat out/csaf.json | jq '.'
+jq . out.json
+```
+
+Validate output against the CSAF 2.0 schema:
+```bash
+python3 scripts/validate.py out.json
 ```
 
 ---
