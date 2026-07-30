@@ -26,29 +26,33 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 	)
 
 	for _, v := range adv.Vulnerabilities {
+		// Include the version range in product_id so entries for the same package with
+		// different ranges stay distinct (product_id must be unique within the document).
+		productID := gocsaf.ProductID(v.Package.Name + ":" + v.VulnerableVersionRange)
 		productName := &gocsaf.FullProductName{
 			Name:      getRepositoryName(v.Package.Name),
-			ProductID: utils.Ref(gocsaf.ProductID(v.Package.Name)),
+			ProductID: utils.Ref(productID),
 		}
 		branch := &gocsaf.Branch{
 			// 1st) add ecosystem branch, 2nd) add product branch and 3rd) add version range
 			// Note: CSAF only allows a branch to EITHER have a branch OR a product
 			// Assumption: Language also comprises programming languages
+			// The schema requires every branch to have a non-empty category (from the enum)
+			// and a non-empty name — so we never emit an intermediate "unnamed" branch like vendor.
 			Category: utils.Ref(gocsaf.CSAFBranchCategoryLanguage),
 			Name:     utils.Ref(v.Package.Ecosystem),
 			Branches: []*gocsaf.Branch{
 				{
+					Category: utils.Ref(gocsaf.CSAFBranchCategoryProductName),
+					Name:     utils.Ref(v.Package.Name),
 					Branches: []*gocsaf.Branch{
 						{
-							Category: utils.Ref(gocsaf.CSAFBranchCategoryProductName),
-							Name:     utils.Ref(v.Package.Name),
-							Branches: []*gocsaf.Branch{
-								{
-									Category: utils.Ref(gocsaf.CSAFBranchCategoryProductVersionRange),
-									Name:     utils.Ref(normalizeOperators(v.VulnerableVersionRange)),
-									Product:  productName,
-								},
-							},
+							// CSAF 2.0 does not define `product_version_range`; that category was
+							// added in CSAF 2.1. We use `product_version` and keep the range
+							// expression in `name` as a workaround.
+							Category: utils.Ref(gocsaf.CSAFBranchCategoryProductVersion),
+							Name:     utils.Ref(normalizeOperators(v.VulnerableVersionRange)),
+							Product:  productName,
 						},
 					},
 				},

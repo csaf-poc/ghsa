@@ -190,7 +190,7 @@ func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
 	tracking = &gocsaf.Tracking{
 		Aliases:            getAliases(adv.Identifiers),                                          // not required
 		CurrentReleaseDate: getCurrentReleaseDate(adv),                                           // required.
-		Generator:          nil,                                                                  // not required
+		Generator:          getGenerator(),                                                       // optional; we populate it because this converter IS the CSAF engine
 		ID:                 utils.Ref(id),                                                        // required
 		InitialReleaseDate: utils.Ref(adv.PublishedAt),                                           // required.
 		RevisionHistory:    revisionHistory,                                                      // required
@@ -199,6 +199,28 @@ func getTracking(adv *repository.Advisory) (tracking *gocsaf.Tracking) {
 	}
 	return
 
+}
+
+// getGenerator returns the CSAF Generator identifying this converter as the producing engine.
+//
+// Per CSAF 2.0, `tracking.generator.engine` describes "the engine that generated the CSAF
+// document." The schema's own examples (`Red Hat rhsa-to-cvrf`, `Secvisogram`, `TVCE`) are
+// exactly this class of tool — advisory converters and authoring tools. This program
+// converts GHSA advisories into CSAF documents, so we ARE the engine, and populating this
+// field is semantically correct rather than a workaround.
+//
+// Side note on the library / Go json interaction: gocsaf declares the field as
+// `Generator *Generator ` + "`" + `json:"generator"` + "`" + ` (no `omitempty`), so a nil pointer would serialize
+// as `"generator": null` — which the schema rejects (if the key is present, the value must
+// be a valid object with `engine.name`). Emitting a real Generator here avoids that pitfall
+// as well, but the primary reason is that the field genuinely describes this tool.
+func getGenerator() *gocsaf.Generator {
+	return &gocsaf.Generator{
+		Engine: &gocsaf.Engine{
+			Name:    utils.Ref("ghsa-to-csaf"),
+			Version: utils.Ref("0.1.0"),
+		},
+	}
 }
 
 // getCurrentReleaseDate picks updated_at if newer else published_at
