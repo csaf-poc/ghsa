@@ -37,7 +37,12 @@
         "CVE-2025-30204"
       ],
       "current_release_date": "2025-03-21T21:35:28Z",
-      "generator": null,
+      "generator": {
+        "engine": {
+          "name": "ghsa-to-csaf",
+          "version": "0.1.0"
+        }
+      },
       "id": "GHSA-mh63-6h87-95cp",
       "initial_release_date": "2025-03-21T20:51:37Z",
       "revision_history": [
@@ -63,22 +68,16 @@
           {
             "branches": [
               {
-                "branches": [
-                  {
-                    "category": "product_version_range",
-                    "name": "≤ 5.2.1",
-                    "product": {
-                      "name": "jwt",
-                      "product_id": "github.com/golang-jwt/jwt/v5"
-                    }
-                  }
-                ],
-                "category": "product_name",
-                "name": "github.com/golang-jwt/jwt/v5"
+                "category": "product_version",
+                "name": "less or equal  5.2.1",
+                "product": {
+                  "name": "jwt",
+                  "product_id": "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1"
+                }
               }
             ],
-            "category": null,
-            "name": null
+            "category": "product_name",
+            "name": "github.com/golang-jwt/jwt/v5"
           }
         ],
         "category": "language",
@@ -89,22 +88,16 @@
           {
             "branches": [
               {
-                "branches": [
-                  {
-                    "category": "product_version_range",
-                    "name": "≤ 4.5.1",
-                    "product": {
-                      "name": "jwt",
-                      "product_id": "github.com/golang-jwt/jwt/v4"
-                    }
-                  }
-                ],
-                "category": "product_name",
-                "name": "github.com/golang-jwt/jwt/v4"
+                "category": "product_version",
+                "name": "less or equal  4.5.1",
+                "product": {
+                  "name": "jwt",
+                  "product_id": "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
+                }
               }
             ],
-            "category": null,
-            "name": null
+            "category": "product_name",
+            "name": "github.com/golang-jwt/jwt/v4"
           }
         ],
         "category": "language",
@@ -114,11 +107,11 @@
     "full_product_names": [
       {
         "name": "jwt",
-        "product_id": "github.com/golang-jwt/jwt/v5"
+        "product_id": "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1"
       },
       {
         "name": "jwt",
-        "product_id": "github.com/golang-jwt/jwt/v4"
+        "product_id": "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
       }
     ]
   },
@@ -137,8 +130,8 @@
       ],
       "product_status": {
         "known_affected": [
-          "github.com/golang-jwt/jwt/v5",
-          "github.com/golang-jwt/jwt/v4"
+          "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1",
+          "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
         ]
       },
       "references": [
@@ -153,8 +146,8 @@
           "category": "vendor_fix",
           "details": "Upgrade to version: 5.2.2, 4.5.2",
           "product_ids": [
-            "github.com/golang-jwt/jwt/v5",
-            "github.com/golang-jwt/jwt/v4"
+            "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1",
+            "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
           ]
         }
       ],
@@ -167,8 +160,8 @@
             "baseSeverity": "HIGH"
           },
           "products": [
-            "github.com/golang-jwt/jwt/v5",
-            "github.com/golang-jwt/jwt/v4"
+            "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1",
+            "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
           ]
         }
       ]
