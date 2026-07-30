@@ -65,6 +65,7 @@ the generation of these sections can be skipped or pruned in the future—yieldi
 | Tracking: Initial release    | `published_at`                                 | Required (ISO 8601)                                  | Use `published_at`                                                                                                |
 | Tracking: Current release    | `updated_at` if > `published_at`               | Required (ISO 8601)                                  | Use `updated_at` if newer, else `published_at`                                                                    |
 | Tracking: Revision history   | `published_at`, `updated_at`                   | Required                                             | Synthesized: 1 = published, 2 = updated (if newer); numbers via `strconv.Itoa`                                    |
+| Tracking: Generator          | converter metadata                              | Optional (`tracking.generator.engine`)               | Populated as engine name/version (`ghsa-to-csaf`, `0.1.0`) to satisfy CSAF schema expectations and identify producer |
 | Tracking: Status             | n/a                                            | Required                                             | Fixed to `final`                                                                                                 |
 | Tracking: Version            | n/a                                            | Required                                             | Length of revision history (as decimal string)                                                                    |
 | Digital signatures           | n/a                                            | Optional signing metadata                            | Not populated                                                                                                    |
@@ -72,11 +73,11 @@ the generation of these sections can be skipped or pruned in the future—yieldi
 ### Product Tree
 | Aspect | GHSA Source | CSAF Expectation | Result / Handling / Assumption                                                                                                                                         |
 |--------|-------------|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Branch hierarchy | Ecosystem → package name → vulnerable range | Hierarchical branches | Implemented as `Language` → `ProductName` → `ProductVersionRange` → `Product`.                                                                                         |
+| Branch hierarchy | Ecosystem → package name → vulnerable range | Hierarchical branches | Implemented as `Language` → `ProductName` → `ProductVersion` → `Product` (range text stored in branch name).                                                          |
 | Ecosystem category | `package.ecosystem` | Category label | Mapped to `Language` category. Assumption: `Language` comprises programming language. Other categories possible, e.g. Vendor if it is `GitHub` or the `Package Owner`. |
 | Product name display | `package.name` and repository path | Full product name | Derived via `getRepositoryName`: for paths on flat-namespace VCS hosts (`github.com`, `bitbucket.org`) the repo segment is extracted (e.g., `github.com/org/repo/v5` → `repo`). GitLab is excluded because subgroups make the repo boundary unknowable from the path. All other names (npm, PyPI, Maven, Composer, Go vanity imports, etc.) are returned as-is. |
-| Product ID | `package.name` | Stable identifier | Use full package name as `product_id`.                                                                                                                                 |
-| Version range formatting | `vulnerable_version_range` | Clean canonical ranges | Whitespace normalized with operator replacement; `<` and `<=` may be substituted with Unicode lookalikes to avoid JSON HTML escaping (see `normalizeOperators`).       |
+| Product ID | `package.name`, `vulnerable_version_range` | Stable identifier | Use `<package.name>:<vulnerable_version_range>` as `product_id` so entries with different ranges remain unique within one document.                                     |
+| Version range formatting | `vulnerable_version_range` | Clean canonical ranges | Operators are rewritten to ASCII words (e.g. `<=` → `less or equal`) to avoid HTML-escaped JSON operators from upstream encoding (see `normalizeOperators`).             |
 | Multi-product relationships | Multiple packages per advisory | Cross-product mapping | Each package is a separate branch; no merging across packages.                                                                                                         |
 | Full product names | Consolidated list | `full_product_names[]` | Populated alongside branches for all products.                                                                                                                         |
 
@@ -101,7 +102,7 @@ Not performed: semantic rewriting of version operators, inference of missing eco
 High-level pipeline:
 1. Input acquisition: GHSA advisory JSON loaded into internal model (`models/ghsa/...`).
 2. Conversion orchestrator (`service/converter/`) assembles CSAF structures.
-3. Product tree construction (`producttree.go`): branches categorized (language → product → version range → product instance).
+3. Product tree construction (`producttree.go`): branches categorized (language → product name → product version [range text] → product instance).
 4. Vulnerability section (`vulnerabilities.go`): maps GHSA vulnerabilities, identifiers, scores, references.
 5. Revision history (`document.go`): timestamps converted into sequential revision numbers (fixed from earlier control character issue by using proper integer → string conversion).
 6. Tracking and metadata: populates minimal CSAF tracking fields from GHSA advisory context.
@@ -164,12 +165,12 @@ That helper internally creates its own `json.Encoder` with Go's default settings
 we cannot inject `SetEscapeHTML(false)`.
 As a consequence characters `<`, `>`, and `&` are HTML‑escaped in the emitted JSON (e.g. `<` becomes `\u003c`).
 For version range fields this makes strict comparisons `<` and `<=` awkward.
-To keep output ASCII‑only and avoid escaped sequences without changing the encoder, the converter now normalizes operators into descriptive English phrases:
+To keep output ASCII-only and avoid escaped sequences without changing the encoder, the converter normalizes operators into descriptive English phrases:
 - `<=` → `less or equal`
 - `>=` → `greater or equal`
 - `<` → `less than`
 - `>` → `greater than`
-- 
+
 This sidesteps HTML escaping while preserving the intended comparison semantics in a human‑readable form. The trade‑off is that downstream tooling expecting literal operators will need to adapt.
 A more robust long‑term solution would be either (a) bypassing `gocsaf.SaveAdvisory` and performing our own encoding with `enc.SetEscapeHTML(false)`, or (b) post‑processing the JSON to unescape these characters.
 
