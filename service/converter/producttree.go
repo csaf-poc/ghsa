@@ -44,7 +44,10 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 					Name:     utils.Ref(v.Package.Name),
 					Branches: []*gocsaf.Branch{
 						{
-							Category: utils.Ref(gocsaf.CSAFBranchCategoryProductVersionRange),
+							// CSAF 2.0 does not define `product_version_range`; that category was
+							// added in CSAF 2.1. We use `product_version` and keep the range
+							// expression in `name` as a workaround.
+							Category: utils.Ref(gocsaf.CSAFBranchCategoryProductVersion),
 							Name:     utils.Ref(normalizeOperators(v.VulnerableVersionRange)),
 							Product:  productName,
 						},
