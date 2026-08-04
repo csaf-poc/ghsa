@@ -201,15 +201,15 @@ func isV4Only(adv *repository.Advisory) bool {
 func calculateSeverity(score float64) csaf.CVSS3Severity {
 	switch {
 	case score >= 9.0:
-		return "CRITICAL"
+		return csaf.CVSS3SeverityCritical
 	case score >= 7.0:
-		return "HIGH"
+		return csaf.CVSS3SeverityHigh
 	case score >= 4.0:
-		return "MEDIUM"
+		return csaf.CVSS3SeverityMedium
 	case score > 0.0:
-		return "LOW"
+		return csaf.CVSS3SeverityLow
 	default:
-		return "NONE"
+		return csaf.CVSS3SeverityNone
 	}
 }
 
