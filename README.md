@@ -89,7 +89,7 @@ the generation of these sections can be skipped or pruned in the future—yieldi
 | CWE mapping | `cwes[]` | One CWE per vulnerability       | Map first CWE (`id` and `name`), omit others. |
 | References | Advisory URL (`html_url`) | Typed references                | One external reference pointing to GHSA HTML page with summary "Advisory HTML URL". |
 | Product status | Affected packages | `known_affected`, `fixed`, etc. | All products derived from product tree marked as `KnownAffected`; no unaffected or fixed breakdown yet. |
-| Scores (CVSS) | `cvss_severities`, `cvss` legacy | CVSS3 with version              | Prefer CVSS v3.1/v3.0 vectors; legacy CVSS used if v3 absent; unsupported vectors are skipped. Severity derived from base score. |
+| Scores (CVSS) | `cvss_severities`, `cvss` legacy | CVSS3 with version              | Source precedence: `cvss_severities.cvss_v3` first, then legacy `cvss`. If only meaningful `cvss_v4` exists, no CVSS score is emitted (to avoid lossy v4->v3 projection), a warning is logged, and a vulnerability note is added. Severity for emitted CVSS v3 remains derived from base score. |
 | Remediations | `patched_versions` per vulnerability | Remediation entries             | If patched versions exist, one `VendorFix` remediation with details "Upgrade to version: <versions>" and product IDs attached. |
 | Discovery / release dates | Not distinct in GHSA | Optional fields                 | Omitted; document tracking covers publish/update. |
 | Threats / VEX flags | Not present | Optional                        | Omitted. |
@@ -192,7 +192,7 @@ You can diff the input vs. output to observe:
 |---------|-------|-----------|
 | Escaped `<` in version range | Default JSON encoder HTML escape | Accept as-is or post-process; custom encoder if allowed. |
 | Missing product branches | Empty `vulnerabilities` list in GHSA | Validate input advisory content; ensure downloader acquired full data. |
-| Lost CVSS vector | GHSA advisory lacks CVSS | No remediation; CSAF will omit score. |
+| Lost CVSS vector | GHSA advisory lacks usable CVSS v3 (`cvss_v3` and legacy `cvss`) | CSAF omits score; if meaningful `cvss_v4` exists, converter logs a warning and adds a vulnerability note about v4-only data. |
 | Unexpected whitespace in ranges | GHSA formatting quirks | Normalization collapses spaces automatically. |
 
 Logging: converter emits structured logs (via `slog`) for save operations; enable debug verbosity if expanding.
