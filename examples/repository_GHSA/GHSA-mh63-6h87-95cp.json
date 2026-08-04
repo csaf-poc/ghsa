@@ -148,9 +148,5 @@
   ],
   "collaborating_users": null,
   "collaborating_teams": null,
-  "private_fork": null,
-  "cvss": {
-    "vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
-    "score": 7.5
-  }
+  "private_fork": null
 }
