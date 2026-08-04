@@ -29,33 +29,66 @@ func getDocument(adv *repository.Advisory) (doc *csaf.Document, err error) {
 	return
 }
 
-// getAcknowledgements maps GHSA detailed credits to CSAF acknowledgments
-// Returns nil if no credits exist.
-// For each entry in adv.CreditsDetailed it creates one Acknowledgement:
-// \- Login used as Names (because full name may be absent)
-// \- OrganizationsURL as Organization
-// \- credit.Type mapped via creditTypeToSummary as Summary (nil if empty)
-// \- HTMLURL placed in URLs
-// No grouping is performed.
-func getAcknowledgements(adv *repository.Advisory) *gocsaf.Acknowledgements {
-	var (
-		ack gocsaf.Acknowledgements
-	)
-	// Return nil if no credits are provided
-	if len(adv.CreditsDetailed) == 0 {
+// getAcknowledgements maps GHSA credits to CSAF acknowledgments.
+// It prefers credits_detailed and falls back to credits when detailed credits are absent.
+func getAcknowledgements(adv *repository.Advisory) (ack *gocsaf.Acknowledgements) {
+	if len(adv.CreditsDetailed) > 0 {
+		ack = getAcknowledgementsFromDetailedCredits(adv.CreditsDetailed)
+	} else {
+		ack = getAcknowledgementsFromCredits(adv.Credits)
+	}
+	return
+}
+
+// getAcknowledgementsFromDetailedCredits maps GHSA detailed credits to CSAF acknowledgments.
+func getAcknowledgementsFromDetailedCredits(detailed []repository.CreditDetailed) *gocsaf.Acknowledgements {
+	var ack gocsaf.Acknowledgements
+	if len(detailed) == 0 {
 		return nil
 	}
 
-	// Add credited users
-	for _, credit := range adv.CreditsDetailed {
+	for _, credit := range detailed {
+		displayName := credit.User.Name
+		if displayName == "" {
+			displayName = credit.User.Login
+		}
+		if displayName == "" {
+			continue
+		}
+
 		ack = append(ack, &gocsaf.Acknowledgement{
-			// We use the login as a name because it is required and the full name may be empty
-			Names:        []*string{&credit.User.Login},
-			Organization: &credit.User.OrganizationsURL,
-			// Use credit type as summary if available
-			Summary: creditTypeToSummary(credit.Type),
-			URLs:    []*string{&credit.User.HTMLURL},
+			Names:        []*string{utils.Ref(displayName)},
+			Organization: utils.Ref(credit.User.OrganizationsURL),
+			Summary:      creditTypeToSummary(credit.Type),
+			URLs:         []*string{utils.Ref(credit.User.HTMLURL)},
 		})
+	}
+
+	if len(ack) == 0 {
+		return nil
+	}
+	return &ack
+}
+
+// getAcknowledgementsFromCredits maps GHSA lightweight credits to CSAF acknowledgments.
+func getAcknowledgementsFromCredits(credits []repository.Credit) *gocsaf.Acknowledgements {
+	var ack gocsaf.Acknowledgements
+	if len(credits) == 0 {
+		return nil
+	}
+
+	for _, credit := range credits {
+		if credit.Login == "" {
+			continue
+		}
+		ack = append(ack, &gocsaf.Acknowledgement{
+			Names:   []*string{utils.Ref(credit.Login)},
+			Summary: creditTypeToSummary(credit.Type),
+		})
+	}
+
+	if len(ack) == 0 {
+		return nil
 	}
 	return &ack
 }
