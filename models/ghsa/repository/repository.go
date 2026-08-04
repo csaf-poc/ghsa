@@ -27,7 +27,7 @@ type Advisory struct {
 	CWEs            []CWE            `json:"cwes"`             // required
 	CWEIds          []string         `json:"cwe_ids"`          // required
 	Credits         []Credit         `json:"credits"`          // required
-	CreditsDetailed []CreditDetailed `json:"credits detailed"` // required
+	CreditsDetailed []CreditDetailed `json:"credits_detailed"` // required
 	// Required. A list of users that collaborate on the advisory
 	CollaboratingUsers []User `json:"collaborating_users"`
 	// Required. A list of teams that collaborate on the advisory

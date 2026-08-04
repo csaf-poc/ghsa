@@ -34,3 +34,50 @@ func Test_getCategoryAndVersion(t *testing.T) {
 		t.Errorf("version = %v, want CSAF 2.0", ver)
 	}
 }
+
+func Test_getAcknowledgements_PrefersDetailedCredits(t *testing.T) {
+	adv := &repository.Advisory{
+		CreditsDetailed: []repository.CreditDetailed{
+			{
+				User: repository.User{
+					Login:            "detailed-user",
+					Name:             "Detailed User",
+					HTMLURL:          "https://github.com/detailed-user",
+					OrganizationsURL: "https://api.github.com/users/detailed-user/orgs",
+				},
+				Type: "REPORTER",
+			},
+		},
+		Credits: []repository.Credit{
+			{Login: "fallback-user", Type: "FINDER"},
+		},
+	}
+
+	ack := getAcknowledgements(adv)
+	if ack == nil || len(*ack) != 1 {
+		t.Fatalf("expected one acknowledgement from detailed credits, got %v", ack)
+	}
+	if (*ack)[0].Names == nil || len((*ack)[0].Names) != 1 || *(*ack)[0].Names[0] != "Detailed User" {
+		t.Fatalf("unexpected acknowledgement name: %#v", (*ack)[0].Names)
+	}
+}
+
+func Test_getAcknowledgements_FallsBackToCredits(t *testing.T) {
+	adv := &repository.Advisory{
+		CreditsDetailed: nil,
+		Credits: []repository.Credit{
+			{Login: "fallback-user", Type: "REPORTER"},
+		},
+	}
+
+	ack := getAcknowledgements(adv)
+	if ack == nil || len(*ack) != 1 {
+		t.Fatalf("expected one acknowledgement from fallback credits, got %v", ack)
+	}
+	if (*ack)[0].Names == nil || len((*ack)[0].Names) != 1 || *(*ack)[0].Names[0] != "fallback-user" {
+		t.Fatalf("unexpected fallback acknowledgement name: %#v", (*ack)[0].Names)
+	}
+	if (*ack)[0].Summary == nil || *(*ack)[0].Summary != "Reported the vulnerability" {
+		t.Fatalf("unexpected fallback acknowledgement summary: %#v", (*ack)[0].Summary)
+	}
+}
