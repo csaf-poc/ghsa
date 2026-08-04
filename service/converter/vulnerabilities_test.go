@@ -17,7 +17,10 @@ func Test_getCWE_and_getCVE(t *testing.T) {
 		t.Errorf("cve = %v, want CVE-2024-0001", cve)
 	}
 	cwe := getCWE(adv)
-	if cwe == nil || cwe.ID == nil || *cwe.ID != gocsaf.WeaknessID("CWE-79") {
+	if cwe == nil {
+		t.Fatalf("cwe = nil, want CWE-79")
+	}
+	if cwe.ID == nil || *cwe.ID != gocsaf.WeaknessID("CWE-79") {
 		t.Errorf("cwe.ID = %v, want CWE-79", cwe.ID)
 	}
 	if cwe.Name == nil || *cwe.Name != "XSS" {
@@ -114,5 +117,54 @@ func Test_getVulnerabilities_V4ZeroAndNoVectorTreatedAsAbsentScore(t *testing.T)
 	}
 	if len(vulns[0].Notes) != 0 {
 		t.Fatalf("expected no conversion note for empty v4 advisory, got %d", len(vulns[0].Notes))
+	}
+}
+
+func Test_getVulnerabilities_KeepsRemediationsPerProduct(t *testing.T) {
+	adv := &repository.Advisory{
+		GhsaID: "GHSA-remediation-test",
+		Vulnerabilities: []repository.Vulnerability{
+			{
+				Package:                repository.Package{Ecosystem: "go", Name: "github.com/golang-jwt/jwt/v5"},
+				VulnerableVersionRange: "<= 5.2.1",
+				PatchedVersions:        "5.2.2",
+			},
+			{
+				Package:                repository.Package{Ecosystem: "go", Name: "github.com/golang-jwt/jwt/v4"},
+				VulnerableVersionRange: "<= 4.5.1",
+				PatchedVersions:        "4.5.2",
+			},
+		},
+	}
+
+	pt, err := getProductTree(adv)
+	if err != nil {
+		t.Fatalf("getProductTree returned error: %v", err)
+	}
+	vulns, err := getVulnerabilities(adv, pt)
+	if err != nil {
+		t.Fatalf("getVulnerabilities returned error: %v", err)
+	}
+	if len(vulns) != 1 {
+		t.Fatalf("expected 1 vulnerability, got %d", len(vulns))
+	}
+	if len(vulns[0].Remediations) != 2 {
+		t.Fatalf("expected 2 remediations, got %d", len(vulns[0].Remediations))
+	}
+
+	first := vulns[0].Remediations[0]
+	if first.Details == nil || *first.Details != "Upgrade to version: 5.2.2" {
+		t.Fatalf("first remediation details = %v, want Upgrade to version: 5.2.2", first.Details)
+	}
+	if first.ProductIds == nil || len(*first.ProductIds) != 1 || (*first.ProductIds)[0] == nil || *(*first.ProductIds)[0] != "github.com/golang-jwt/jwt/v5:lte-5.2.1" {
+		t.Fatalf("first remediation product IDs = %v, want github.com/golang-jwt/jwt/v5:lte-5.2.1", first.ProductIds)
+	}
+
+	second := vulns[0].Remediations[1]
+	if second.Details == nil || *second.Details != "Upgrade to version: 4.5.2" {
+		t.Fatalf("second remediation details = %v, want Upgrade to version: 4.5.2", second.Details)
+	}
+	if second.ProductIds == nil || len(*second.ProductIds) != 1 || (*second.ProductIds)[0] == nil || *(*second.ProductIds)[0] != "github.com/golang-jwt/jwt/v4:lte-4.5.1" {
+		t.Fatalf("second remediation product IDs = %v, want github.com/golang-jwt/jwt/v4:lte-4.5.1", second.ProductIds)
 	}
 }
