@@ -213,23 +213,24 @@ func calculateSeverity(score float64) csaf.CVSS3Severity {
 	}
 }
 
-// getRemediations builds remediation entries using patched versions
+// getRemediations builds remediation entries using patched versions.
+// Keep each remediation aligned with its corresponding product so the
+// patched version remains product-specific instead of being flattened into
+// a single advisory-wide string.
 func getRemediations(adv *repository.Advisory, productIDs csaf.Products) csaf.Remediations {
 	var remediations csaf.Remediations
-	var patchedVersions []string
 
-	for _, vuln := range adv.Vulnerabilities {
-		if vuln.PatchedVersions != "" {
-			patchedVersions = append(patchedVersions, vuln.PatchedVersions)
+	for i, vuln := range adv.Vulnerabilities {
+		if vuln.PatchedVersions == "" || i >= len(productIDs) || productIDs[i] == nil {
+			continue
 		}
-	}
 
-	if len(patchedVersions) > 0 && len(productIDs) > 0 {
-		details := fmt.Sprintf("Upgrade to version: %s", strings.Join(patchedVersions, ", "))
+		details := fmt.Sprintf("Upgrade to version: %s", vuln.PatchedVersions)
+		productID := csaf.Products{productIDs[i]}
 		remediations = append(remediations, &csaf.Remediation{
 			Category:   utils.Ref(csaf.CSAFRemediationCategoryVendorFix),
 			Details:    utils.Ref(details),
-			ProductIds: &productIDs,
+			ProductIds: &productID,
 		})
 	}
 

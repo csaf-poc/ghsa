@@ -1,5 +1,27 @@
 {
   "document": {
+    "acknowledgements": [
+      {
+        "names": [
+          "jub0bs"
+        ],
+        "organization": "https://api.github.com/users/jub0bs/orgs",
+        "summary": "reporter",
+        "urls": [
+          "https://github.com/jub0bs"
+        ]
+      },
+      {
+        "names": [
+          "Web-E"
+        ],
+        "organization": "https://api.github.com/users/Web-E/orgs",
+        "summary": "reporter",
+        "urls": [
+          "https://github.com/Web-E"
+        ]
+      }
+    ],
     "aggregate_severity": {
       "text": "high"
     },
@@ -144,9 +166,15 @@
       "remediations": [
         {
           "category": "vendor_fix",
-          "details": "Upgrade to version: 5.2.2, 4.5.2",
+          "details": "Upgrade to version: 5.2.2",
           "product_ids": [
-            "github.com/golang-jwt/jwt/v5:lte-5.2.1",
+            "github.com/golang-jwt/jwt/v5:lte-5.2.1"
+          ]
+        },
+        {
+          "category": "vendor_fix",
+          "details": "Upgrade to version: 4.5.2",
+          "product_ids": [
             "github.com/golang-jwt/jwt/v4:lte-4.5.1"
           ]
         }
