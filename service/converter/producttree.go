@@ -28,7 +28,7 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 	for _, v := range adv.Vulnerabilities {
 		// Include the version range in product_id so entries for the same package with
 		// different ranges stay distinct (product_id must be unique within the document).
-		productID := gocsaf.ProductID(v.Package.Name + ":" + v.VulnerableVersionRange)
+		productID := gocsaf.ProductID(v.Package.Name + ":" + normalizeVersionRangeForID(v.VulnerableVersionRange))
 		productName := &gocsaf.FullProductName{
 			Name:      getRepositoryName(v.Package.Name),
 			ProductID: utils.Ref(productID),
@@ -109,4 +109,15 @@ func normalizeOperators(r string) string {
 
 	r = strings.TrimSpace(r)
 	return r
+}
+
+// normalizeVersionRangeForID encodes comparison operators as compact ASCII tokens
+// so that product_id values contain no '<' or '>' characters.
+func normalizeVersionRangeForID(r string) string {
+	r = strings.ReplaceAll(r, "<=", "lte-")
+	r = strings.ReplaceAll(r, ">=", "gte-")
+	r = strings.ReplaceAll(r, "<", "lt-")
+	r = strings.ReplaceAll(r, ">", "gt-")
+	r = strings.ReplaceAll(r, "- ", "-")
+	return strings.TrimSpace(r)
 }

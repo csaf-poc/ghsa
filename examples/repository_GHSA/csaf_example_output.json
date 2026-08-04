@@ -72,7 +72,7 @@
                 "name": "less or equal  5.2.1",
                 "product": {
                   "name": "jwt",
-                  "product_id": "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1"
+                  "product_id": "github.com/golang-jwt/jwt/v5:lte-5.2.1"
                 }
               }
             ],
@@ -92,7 +92,7 @@
                 "name": "less or equal  4.5.1",
                 "product": {
                   "name": "jwt",
-                  "product_id": "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
+                  "product_id": "github.com/golang-jwt/jwt/v4:lte-4.5.1"
                 }
               }
             ],
@@ -107,11 +107,11 @@
     "full_product_names": [
       {
         "name": "jwt",
-        "product_id": "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1"
+        "product_id": "github.com/golang-jwt/jwt/v5:lte-5.2.1"
       },
       {
         "name": "jwt",
-        "product_id": "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
+        "product_id": "github.com/golang-jwt/jwt/v4:lte-4.5.1"
       }
     ]
   },
@@ -130,8 +130,8 @@
       ],
       "product_status": {
         "known_affected": [
-          "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1",
-          "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
+          "github.com/golang-jwt/jwt/v5:lte-5.2.1",
+          "github.com/golang-jwt/jwt/v4:lte-4.5.1"
         ]
       },
       "references": [
@@ -146,8 +146,8 @@
           "category": "vendor_fix",
           "details": "Upgrade to version: 5.2.2, 4.5.2",
           "product_ids": [
-            "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1",
-            "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
+            "github.com/golang-jwt/jwt/v5:lte-5.2.1",
+            "github.com/golang-jwt/jwt/v4:lte-4.5.1"
           ]
         }
       ],
@@ -160,8 +160,8 @@
             "baseSeverity": "HIGH"
           },
           "products": [
-            "github.com/golang-jwt/jwt/v5:\u003c= 5.2.1",
-            "github.com/golang-jwt/jwt/v4:\u003c= 4.5.1"
+            "github.com/golang-jwt/jwt/v5:lte-5.2.1",
+            "github.com/golang-jwt/jwt/v4:lte-4.5.1"
           ]
         }
       ]
