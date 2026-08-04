@@ -2,6 +2,7 @@ package converter
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/csaf-poc/ghsa/internal/utils"
@@ -22,7 +23,7 @@ import (
 // and result in unnecessary data duplication.
 func getVulnerabilities(adv *repository.Advisory, pt *csaf.ProductTree) (vulnerabilities csaf.Vulnerabilities, err error) {
 	productIDs := getProductIDs(pt)
-	productStatus, scores := getProductStatusAndScores(adv, productIDs)
+	productStatus, scores, notes := getProductStatusScoresAndNotes(adv, productIDs)
 	v := &csaf.Vulnerability{
 		CVE:              getCVE(adv),
 		CWE:              getCWE(adv),
@@ -34,7 +35,7 @@ func getVulnerabilities(adv *repository.Advisory, pt *csaf.ProductTree) (vulnera
 		Acknowledgements: nil, // The acknowledgements are already included in the document (CreditsDetailed applies to the entire advisory)
 		DiscoveryDate:    nil, // GHSA doesn't provide this distinct from publication dates
 		Involvements:     nil, // Involvements are already included in the document, see Publisher and Tracking
-		Notes:            nil, // The notes are already included in the document which describes the advisory as a whole.
+		Notes:            notes,
 		Flags:            nil, // GHSA lacks VEX justification data
 		ReleaseDate:      nil, // Finding out when this "was originally released into the wild" requires extensive analysis
 		Threats:          nil, // GHSA lacks detailed threat intelligence beyond severity
@@ -65,8 +66,16 @@ func getReferences(adv *repository.Advisory) (r csaf.References) {
 	return
 }
 
-// getProductStatusAndScores derives product status and optional CVSS scores
-func getProductStatusAndScores(adv *repository.Advisory, productIDs csaf.Products) (status *csaf.ProductStatus, scores []*csaf.Score) {
+// getProductStatusScoresAndNotes derives three vulnerability facets from one place:
+// - product status (known_affected)
+// - score entries (only when we can produce CSAF CVSS v3)
+// - conversion notes (when GHSA has meaningful v4-only data)
+//
+// Design intent:
+// - Keep score emission strict (no lossy v4->v3 projection).
+// - Keep operators informed: v4-only advisories generate both a log warning and a CSAF note.
+// - Keep output clean when v4 is effectively empty (no vector and score 0): treat as absent, no note.
+func getProductStatusScoresAndNotes(adv *repository.Advisory, productIDs csaf.Products) (status *csaf.ProductStatus, scores []*csaf.Score, notes csaf.Notes) {
 	if len(productIDs) > 0 {
 		// We assume that all products associated with this advisory in the tree are "Known Affected"
 		// unless specific status logic (e.g. fixed/patched separation) is implemented upstream.
@@ -74,12 +83,26 @@ func getProductStatusAndScores(adv *repository.Advisory, productIDs csaf.Product
 			KnownAffected: &productIDs,
 		}
 
-		// Scores
+		// Scores: generated only for valid CVSS v3 vectors (see convertScores).
 		score, err := convertScores(adv, productIDs)
 		if err == nil && score != nil {
 			scores = []*csaf.Score{score}
 		}
 	}
+
+	if isV4Only(adv) {
+		// v4 exists without a usable v3 source; keep score empty and document why.
+		slog.Warn("GHSA advisory only provides CVSS v4: Omitting vulnerability score to avoid lossy v4-to-v3 conversion",
+			slog.String("GHSA ID", adv.GhsaID))
+		notes = csaf.Notes{
+			&csaf.Note{
+				NoteCategory: utils.Ref(csaf.CSAFNoteCategoryDescription),
+				Title:        utils.Ref("CVSS conversion limitation"),
+				Text:         utils.Ref("The advisory provides only CVSS v4 data. This converter currently exports only CVSS v3 vulnerability scores in CSAF 2.0, so the score was omitted to avoid lossy conversion."),
+			},
+		}
+	}
+
 	return
 }
 
@@ -114,7 +137,16 @@ func getCVE(adv *repository.Advisory) (cve *csaf.CVE) {
 	return
 }
 
-// convertScores converts GHSA CVSS data into a CSAF Score (prefers CVSSv3)
+// convertScores converts GHSA CVSS into CSAF CVSS v3 only.
+//
+// Source precedence:
+// 1) GHSA cvss_severities.cvss_v3 (preferred explicit source)
+// 2) GHSA legacy cvss (backward compatibility)
+// 3) otherwise no score
+//
+// Safety rule:
+// We only accept vectors that clearly declare CVSS 3.0/3.1. Any other vector
+// version is rejected to avoid accidentally placing non-v3 semantics into CSAF cvss_v3.
 func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Score, error) {
 	// Prefer CVSS v3 from CVSSSeverities
 	var vector string
@@ -128,6 +160,7 @@ func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Sc
 		vector = adv.CVSS.VectorString
 		scoreVal = adv.CVSS.Score
 	} else {
+		// No v3-compatible score source. CVSS v4-only cases are handled via notes/logging.
 		return nil, nil
 	}
 
@@ -138,8 +171,7 @@ func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Sc
 	} else if strings.HasPrefix(vector, "CVSS:3.0") {
 		version = csaf.CVSSVersion30
 	} else {
-		// Skip unsupported versions (e.g. v2 or v4 if not supported by CSAF types yet)
-		// CSAF 2.0 mainly targets CVSS 3.x
+		// Reject non-3.x vectors (e.g., v2/v4) instead of coercing them into cvss_v3.
 		return nil, fmt.Errorf("unsupported or invalid CVSS vector: %s", vector)
 	}
 
@@ -154,19 +186,30 @@ func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Sc
 	}, nil
 }
 
-// calculateSeverity maps a numeric CVSS score to a severity string
+// isV4Only determines if an advisory contains only CVSS v4 data
+func isV4Only(adv *repository.Advisory) bool {
+	if adv.CVSSSeverities.CVSSv3.VectorString != "" || adv.CVSS.VectorString != "" {
+		return false
+	}
+
+	v4 := adv.CVSSSeverities.CVSSv4
+	// Check if v4 has meaningful data
+	return strings.TrimSpace(v4.VectorString) != "" || v4.Score > 0
+}
+
+// calculateSeverity maps a numeric CVSS score to a severity string according to the CVSS v3.1 specification
 func calculateSeverity(score float64) csaf.CVSS3Severity {
 	switch {
 	case score >= 9.0:
-		return "CRITICAL"
+		return csaf.CVSS3SeverityCritical
 	case score >= 7.0:
-		return "HIGH"
+		return csaf.CVSS3SeverityHigh
 	case score >= 4.0:
-		return "MEDIUM"
+		return csaf.CVSS3SeverityMedium
 	case score > 0.0:
-		return "LOW"
+		return csaf.CVSS3SeverityLow
 	default:
-		return "NONE"
+		return csaf.CVSS3SeverityNone
 	}
 }
 
