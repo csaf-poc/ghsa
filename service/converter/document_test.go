@@ -2,15 +2,19 @@ package converter
 
 import (
 	"testing"
+	"time"
 
+	"github.com/csaf-poc/ghsa/internal/utils"
 	"github.com/csaf-poc/ghsa/models/ghsa/repository"
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
 func Test_getRevisionHistory(t *testing.T) {
+	pubAt, _ := time.Parse(time.RFC3339, "2024-01-02T03:04:05Z")
+	updAt, _ := time.Parse(time.RFC3339, "2024-02-02T03:04:05Z")
 	adv := &repository.Advisory{
-		PublishedAt: "2024-01-02T03:04:05Z",
-		UpdatedAt:   "2024-02-02T03:04:05Z",
+		PublishedAt: &pubAt,
+		UpdatedAt:   &updAt,
 	}
 	revs := getRevisionHistory(adv)
 	if len(revs) != 2 {
@@ -41,7 +45,7 @@ func Test_getAcknowledgements_PrefersDetailedCredits(t *testing.T) {
 			{
 				User: repository.User{
 					Login:            "detailed-user",
-					Name:             "Detailed User",
+					Name:             utils.Ref("Detailed User"),
 					HTMLURL:          "https://github.com/detailed-user",
 					OrganizationsURL: "https://api.github.com/users/detailed-user/orgs",
 				},

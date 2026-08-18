@@ -9,25 +9,27 @@ import (
 	"net/url"
 	"strings"
 
-	ghsarepository "github.com/csaf-poc/ghsa/models/ghsa/repository"
+	"github.com/csaf-poc/ghsa/models/ghsa"
+	"github.com/csaf-poc/ghsa/models/ghsa/global"
+	"github.com/csaf-poc/ghsa/models/ghsa/repository"
 )
 
 // DownloadGHSA fetches and unmarshals a GHSA advisory from a browser or API URL
-// It handles both browser and API URL formats, normalizes them to the API format,
-// makes an HTTP GET request, and unmarshals the JSON response into an Advisory struct.
-// Returns the Advisory or an error if normalization, network request, or unmarshaling fails.
-func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
+// It handles both browser and API URL formats (repository and global), normalizes them,
+// makes an HTTP GET request, and unmarshals the JSON response into the appropriate struct.
+// Returns a GHSAAdvisory interface or an error.
+func DownloadGHSA(url string) (adv ghsa.GHSAAdvisory, err error) {
 	slog.Info("Downloading GitHub Security Advisory (GHSA)",
 		slog.String("URL", url))
-	// Normalize URL to standard API format (accepts both browser and API URLs)
-	url, err = normalizeGHSAURL(url)
+	// Normalize URL to standard API format
+	normalizedURL, isGlobal, err := normalizeGHSAURL(url)
 	if err != nil {
 		err = fmt.Errorf("invalid URL: %v", err)
 		return nil, err
 	}
 
 	// Fetch the advisory from GitHub API
-	resp, err := http.Get(url)
+	resp, err := http.Get(normalizedURL)
 	if err != nil {
 		err = fmt.Errorf("could not create request due to network error: '%v'", err)
 		return
@@ -44,19 +46,32 @@ func DownloadGHSA(url string) (ghsa *ghsarepository.Advisory, err error) {
 		err = fmt.Errorf("could not read response body: %v", err)
 		return nil, err
 	}
-	err = json.Unmarshal(body, &ghsa)
-	if err != nil {
-		err = fmt.Errorf("could not unmarshal response body: %v", err)
-		return nil, err
+
+	if isGlobal {
+		var g global.Advisory
+		err = json.Unmarshal(body, &g)
+		if err != nil {
+			err = fmt.Errorf("could not unmarshal global advisory: %v", err)
+			return nil, err
+		}
+		adv = &g
+	} else {
+		var r repository.Advisory
+		err = json.Unmarshal(body, &r)
+		if err != nil {
+			err = fmt.Errorf("could not unmarshal repository advisory: %v", err)
+			return nil, err
+		}
+		adv = &r
 	}
-	return ghsa, nil
+
+	return adv, nil
 }
 
-// normalizeGHSAURL converts a browser GHSA URL to its canonical API endpoint form
-// It accepts both browser URLs (github.com/OWNER/REPO/security/advisories/GHSA_ID)
-// and API URLs (api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID),
-// returning the normalized API URL format.
-func normalizeGHSAURL(ghsaURL string) (apiURL string, err error) {
+// normalizeGHSAURL converts a browser GHSA URL to its canonical API endpoint form.
+// It supports both repository-level and global advisories.
+// Returns the normalized API URL, a boolean indicating if it's a global advisory, and an error.
+func normalizeGHSAURL(ghsaURL string) (apiURL string, isGlobal bool, err error) {
 	var (
 		u *url.URL
 	)
@@ -70,20 +85,35 @@ func normalizeGHSAURL(ghsaURL string) (apiURL string, err error) {
 	// Split URL into parts
 	parts := strings.Split(u.Path, "/")
 
-	// Check for browser format (https://github.com/OWNER/REPO/security/advisories/GHSA_ID)
-	if u.Host == "github.com" && len(parts) == 6 && parts[3] == "security" && parts[4] == "advisories" {
-		apiURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/security-advisories/%s", parts[1], parts[2], parts[5])
+	// Check for global advisory browser format (https://github.com/advisories/GHSA-xxxx-xxxx-xxxx)
+	if u.Host == "github.com" && len(parts) == 3 && parts[1] == "advisories" {
+		apiURL = fmt.Sprintf("https://api.github.com/advisories/%s", parts[2])
+		isGlobal = true
 		return
 	}
 
-	// Check for API format (api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID)
-	if u.Host == "api.github.com" && len(parts) == 6 && parts[1] == "repos" && parts[4] == "security-advisories" {
-		// ghsaURL is already in the correct format
+	// Check for global API format (https://api.github.com/advisories/GHSA-xxxx-xxxx-xxxx)
+	if u.Host == "api.github.com" && len(parts) == 3 && parts[1] == "advisories" {
 		apiURL = ghsaURL
+		isGlobal = true
+		return
+	}
+
+	// Check for repository browser format (https://github.com/OWNER/REPO/security/advisories/GHSA_ID)
+	if u.Host == "github.com" && len(parts) == 6 && parts[3] == "security" && parts[4] == "advisories" {
+		apiURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/security-advisories/%s", parts[1], parts[2], parts[5])
+		isGlobal = false
+		return
+	}
+
+	// Check for repository API format (https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID)
+	if u.Host == "api.github.com" && len(parts) == 6 && parts[1] == "repos" && parts[4] == "security-advisories" {
+		apiURL = ghsaURL
+		isGlobal = false
 		return
 	}
 
 	// Unsupported URL format
-	err = fmt.Errorf("unsupported URL: %s. Expected `%s` or `%s`", ghsaURL, "https://github.com/OWNER/REPO/security/advisories/GHSA_ID", "https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID")
+	err = fmt.Errorf("unsupported URL: %s. Expected repository or global advisory URL", ghsaURL)
 	return
 }

@@ -3,7 +3,7 @@ package downloader
 import (
 	"testing"
 
-	ghsarepository "github.com/csaf-poc/ghsa/models/ghsa/repository"
+	"github.com/csaf-poc/ghsa/models/ghsa"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,17 +23,17 @@ func TestDownloadGHSA(t *testing.T) {
 				url: "https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp",
 			},
 			wantGhsa: func(t assert.TestingT, got interface{}, want ...interface{}) bool {
-				gotGhsa, ok := got.(*ghsarepository.Advisory)
+				gotGhsa, ok := got.(ghsa.GHSAAdvisory)
 				if !ok {
-					t.Errorf("DownloadGHSA() got = %v, want *ghsarepository.Advisory", got)
+					t.Errorf("DownloadGHSA() got = %v, want ghsa.GHSAAdvisory", got)
 					return false
 				}
-				if wantID := "GHSA-mh63-6h87-95cp"; gotGhsa.GhsaID != wantID {
-					t.Errorf("DownloadGHSA() gotGhsa.GhsaID = '%v', want.GhsaID '%v'", gotGhsa.GhsaID, wantID)
+				if wantID := "GHSA-mh63-6h87-95cp"; gotGhsa.GetGhsaID() != wantID {
+					t.Errorf("DownloadGHSA() gotGhsa.GetGhsaID() = '%v', want.GetGhsaID() '%v'", gotGhsa.GetGhsaID(), wantID)
 					return false
 				}
-				if wantCveId := "CVE-2025-30204"; gotGhsa.CveID != wantCveId {
-					t.Errorf("DownloadGHSA() gotGhsa.CveID = '%v', want.CveID '%v'", gotGhsa.CveID, wantCveId)
+				if wantCveId := "CVE-2025-30204"; gotGhsa.GetCveID() != wantCveId {
+					t.Errorf("DownloadGHSA() gotGhsa.GetCveID() = '%v', want.GetCveID() '%v'", gotGhsa.GetCveID(), wantCveId)
 					return false
 				}
 				return true
@@ -46,9 +46,12 @@ func TestDownloadGHSA(t *testing.T) {
 				url: "https://api.gitlb.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
 			},
 			wantGhsa: func(t assert.TestingT, got interface{}, want ...interface{}) bool {
-				gotGhsa, ok := got.(*ghsarepository.Advisory)
+				if got == nil {
+					return true
+				}
+				gotGhsa, ok := got.(ghsa.GHSAAdvisory)
 				if !ok {
-					t.Errorf("DownloadGHSA() got = %v, want *ghsarepository.Advisory", got)
+					t.Errorf("DownloadGHSA() got = %v, want ghsa.GHSAAdvisory", got)
 					return false
 				}
 				return gotGhsa == nil
@@ -63,9 +66,12 @@ func TestDownloadGHSA(t *testing.T) {
 				url: "https://api.github.com/repos/golang-jwt/jwt/security-advisories/This-Is-Not-A-GHSA",
 			},
 			wantGhsa: func(t assert.TestingT, got interface{}, want ...interface{}) bool {
-				gotGhsa, ok := got.(*ghsarepository.Advisory)
+				if got == nil {
+					return true
+				}
+				gotGhsa, ok := got.(ghsa.GHSAAdvisory)
 				if !ok {
-					t.Errorf("DownloadGHSA() got = %v, want *ghsarepository.Advisory", got)
+					t.Errorf("DownloadGHSA() got = %v, want ghsa.GHSAAdvisory", got)
 					return false
 				}
 				return gotGhsa == nil
@@ -147,7 +153,7 @@ func TestCheckURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := normalizeGHSAURL(tt.args.urlStr)
+			got, _, err := normalizeGHSAURL(tt.args.urlStr)
 			tt.wantErr(t, err)
 			if got != tt.want {
 				t.Errorf("normalizeGHSAURL() got = %v, want %v", got, tt.want)

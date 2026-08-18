@@ -3,13 +3,14 @@ package converter
 import (
 	"testing"
 
+	"github.com/csaf-poc/ghsa/internal/utils"
 	"github.com/csaf-poc/ghsa/models/ghsa/repository"
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
 
 func Test_getCWE_and_getCVE(t *testing.T) {
 	adv := &repository.Advisory{
-		CveID: "CVE-2024-0001",
+		CveID: utils.Ref("CVE-2024-0001"),
 		CWEs:  []repository.CWE{{CWEID: "CWE-79", Name: "XSS"}},
 	}
 	cve := getCVE(adv)
@@ -39,8 +40,8 @@ func Test_getReferences(t *testing.T) {
 func Test_convertScores_PrefersCVSSv3WhenV3AndV4Exist(t *testing.T) {
 	adv := &repository.Advisory{
 		CVSSSeverities: repository.CVSSSeverities{
-			CVSSv3: repository.CVSS{VectorString: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L", Score: 7.3},
-			CVSSv4: repository.CVSS{VectorString: "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N", Score: 9.9},
+			CVSSv3: repository.CVSS{VectorString: utils.Ref("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L"), Score: utils.Ref(7.3)},
+			CVSSv4: repository.CVSS{VectorString: utils.Ref("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"), Score: utils.Ref(9.9)},
 		},
 	}
 	pid := gocsaf.ProductID("pkg-1")
@@ -62,11 +63,11 @@ func Test_getVulnerabilities_AddsNoteWhenOnlyMeaningfulV4Exists(t *testing.T) {
 	adv := &repository.Advisory{
 		GhsaID: "GHSA-v4-only",
 		CVSSSeverities: repository.CVSSSeverities{
-			CVSSv4: repository.CVSS{VectorString: "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N", Score: 8.8},
+			CVSSv4: repository.CVSS{VectorString: utils.Ref("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"), Score: utils.Ref(8.8)},
 		},
 		Vulnerabilities: []repository.Vulnerability{{
-			Package:                repository.Package{Ecosystem: "go", Name: "github.com/acme/lib/v2"},
-			VulnerableVersionRange: "<=1.2.3",
+			Package:                &repository.Package{Ecosystem: "go", Name: utils.Ref("github.com/acme/lib/v2")},
+			VulnerableVersionRange: utils.Ref("<=1.2.3"),
 		}},
 	}
 
@@ -93,11 +94,11 @@ func Test_getVulnerabilities_V4ZeroAndNoVectorTreatedAsAbsentScore(t *testing.T)
 	adv := &repository.Advisory{
 		GhsaID: "GHSA-v4-empty",
 		CVSSSeverities: repository.CVSSSeverities{
-			CVSSv4: repository.CVSS{VectorString: "", Score: 0},
+			CVSSv4: repository.CVSS{VectorString: utils.Ref(""), Score: utils.Ref(float64(0))},
 		},
 		Vulnerabilities: []repository.Vulnerability{{
-			Package:                repository.Package{Ecosystem: "go", Name: "github.com/acme/lib/v2"},
-			VulnerableVersionRange: "<=1.2.3",
+			Package:                &repository.Package{Ecosystem: "go", Name: utils.Ref("github.com/acme/lib/v2")},
+			VulnerableVersionRange: utils.Ref("<=1.2.3"),
 		}},
 	}
 
@@ -125,14 +126,14 @@ func Test_getVulnerabilities_KeepsRemediationsPerProduct(t *testing.T) {
 		GhsaID: "GHSA-remediation-test",
 		Vulnerabilities: []repository.Vulnerability{
 			{
-				Package:                repository.Package{Ecosystem: "go", Name: "github.com/golang-jwt/jwt/v5"},
-				VulnerableVersionRange: "<= 5.2.1",
-				PatchedVersions:        "5.2.2",
+				Package:                &repository.Package{Ecosystem: "go", Name: utils.Ref("github.com/golang-jwt/jwt/v5")},
+				VulnerableVersionRange: utils.Ref("<= 5.2.1"),
+				PatchedVersions:        utils.Ref("5.2.2"),
 			},
 			{
-				Package:                repository.Package{Ecosystem: "go", Name: "github.com/golang-jwt/jwt/v4"},
-				VulnerableVersionRange: "<= 4.5.1",
-				PatchedVersions:        "4.5.2",
+				Package:                &repository.Package{Ecosystem: "go", Name: utils.Ref("github.com/golang-jwt/jwt/v4")},
+				VulnerableVersionRange: utils.Ref("<= 4.5.1"),
+				PatchedVersions:        utils.Ref("4.5.2"),
 			},
 		},
 	}

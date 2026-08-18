@@ -5,20 +5,20 @@ import (
 	"log/slog"
 
 	"github.com/csaf-poc/ghsa/models/csaf"
-	"github.com/csaf-poc/ghsa/models/ghsa/repository"
+	"github.com/csaf-poc/ghsa/models/ghsa"
 )
 
 const documentCategory = "GitHub Security Advisory"
 
 // ToCSAF converts a GHSA Advisory into a CSAF Advisory aggregating document, product tree and vulnerabilities.
-func ToCSAF(adv *repository.Advisory) (csafadvisory *csaf.Advisory, err error) {
+func ToCSAF(adv ghsa.GHSAAdvisory) (csafadvisory *csaf.Advisory, err error) {
 	var (
 		d  *csaf.Document
 		pt *csaf.ProductTree
 		v  csaf.Vulnerabilities
 	)
 	slog.Info("Converting advisory to CSAF document",
-		slog.String("GHSA ID", adv.GhsaID))
+		slog.String("GHSA ID", adv.GetGhsaID()))
 
 	d, err = getDocument(adv)
 	if err != nil {
