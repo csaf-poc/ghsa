@@ -6,22 +6,12 @@ import (
 	"strings"
 
 	"github.com/csaf-poc/ghsa/internal/utils"
-	"github.com/csaf-poc/ghsa/models/ghsa/repository"
+	"github.com/csaf-poc/ghsa/models/ghsa"
 	"github.com/gocsaf/csaf/v3/csaf"
 )
 
 // getVulnerabilities creates a single CSAF vulnerability from a GHSA advisory (first CWE only)
-//
-// Design Note on Vulnerability & CWE Mapping:
-// A GHSA Advisory typically corresponds to a single CVE but may list multiple CWEs.
-// But CSAF 2.0 enforces a strict 1:1 relationship between a Vulnerability object and a CWE.
-//
-// To adhere to this standard, this function creates a single CSAF Vulnerability object
-// and maps only the *first* CWE from the GHSA list, treating it as the primary weakness.
-// We intentionally avoid splitting the advisory into multiple Vulnerability objects (one per CWE)
-// because that would incorrectly imply the existence of multiple distinct security flaws (CVEs)
-// and result in unnecessary data duplication.
-func getVulnerabilities(adv *repository.Advisory, pt *csaf.ProductTree) (vulnerabilities csaf.Vulnerabilities, err error) {
+func getVulnerabilities(adv ghsa.GHSAAdvisory, pt *csaf.ProductTree) (vulnerabilities csaf.Vulnerabilities, err error) {
 	productIDs := getProductIDs(pt)
 	productStatus, scores, notes := getProductStatusScoresAndNotes(adv, productIDs)
 	v := &csaf.Vulnerability{
@@ -55,12 +45,12 @@ func getProductIDs(pt *csaf.ProductTree) (products []*csaf.ProductID) {
 }
 
 // getReferences returns a CSAF references slice with the advisory HTML page
-func getReferences(adv *repository.Advisory) (r csaf.References) {
+func getReferences(adv ghsa.GHSAAdvisory) (r csaf.References) {
 	r = []*csaf.Reference{
 		{
 			ReferenceCategory: utils.Ref(string(csaf.CSAFReferenceCategoryExternal)),
 			Summary:           utils.Ref("Advisory HTML URL"),
-			URL:               utils.Ref(adv.HTMLURL),
+			URL:               utils.Ref(adv.GetHTMLURL()),
 		},
 	}
 	return
@@ -75,7 +65,7 @@ func getReferences(adv *repository.Advisory) (r csaf.References) {
 // - Keep score emission strict (no lossy v4->v3 projection).
 // - Keep operators informed: v4-only advisories generate both a log warning and a CSAF note.
 // - Keep output clean when v4 is effectively empty (no vector and score 0): treat as absent, no note.
-func getProductStatusScoresAndNotes(adv *repository.Advisory, productIDs csaf.Products) (status *csaf.ProductStatus, scores []*csaf.Score, notes csaf.Notes) {
+func getProductStatusScoresAndNotes(adv ghsa.GHSAAdvisory, productIDs csaf.Products) (status *csaf.ProductStatus, scores []*csaf.Score, notes csaf.Notes) {
 	if len(productIDs) > 0 {
 		// We assume that all products associated with this advisory in the tree are "Known Affected"
 		// unless specific status logic (e.g. fixed/patched separation) is implemented upstream.
@@ -93,7 +83,7 @@ func getProductStatusScoresAndNotes(adv *repository.Advisory, productIDs csaf.Pr
 	if isV4Only(adv) {
 		// v4 exists without a usable v3 source; keep score empty and document why.
 		slog.Warn("GHSA advisory only provides CVSS v4: Omitting vulnerability score to avoid lossy v4-to-v3 conversion",
-			slog.String("GHSA ID", adv.GhsaID))
+			slog.String("GHSA ID", adv.GetGhsaID()))
 		notes = csaf.Notes{
 			&csaf.Note{
 				NoteCategory: utils.Ref(csaf.CSAFNoteCategoryDescription),
@@ -107,60 +97,42 @@ func getProductStatusScoresAndNotes(adv *repository.Advisory, productIDs csaf.Pr
 }
 
 // getVulnerabilityIDs returns vulnerability IDs referencing the GHSA ID
-func getVulnerabilityIDs(adv *repository.Advisory) (ids csaf.VulnerabilityIDs) {
+func getVulnerabilityIDs(adv ghsa.GHSAAdvisory) (ids csaf.VulnerabilityIDs) {
 	ids = []*csaf.VulnerabilityID{
 		{
 			SystemName: utils.Ref("GitHub Security Advisory"),
-			Text:       utils.Ref(adv.GhsaID),
+			Text:       utils.Ref(adv.GetGhsaID()),
 		},
 	}
 	return
 }
 
 // getCWE maps the first GHSA CWE to CSAF CWE
-func getCWE(adv *repository.Advisory) (cwe *csaf.CWE) {
-	if len(adv.CWEs) > 0 {
+func getCWE(adv ghsa.GHSAAdvisory) (cwe *csaf.CWE) {
+	cwes := adv.GetCWEs()
+	if len(cwes) > 0 {
 		// We map the first CWE found in the GHSA as the primary one
 		cwe = &csaf.CWE{
-			ID:   utils.Ref(csaf.WeaknessID(adv.CWEs[0].CWEID)),
-			Name: utils.Ref(adv.CWEs[0].Name),
+			ID:   utils.Ref(csaf.WeaknessID(cwes[0].CWEID)),
+			Name: utils.Ref(cwes[0].Name),
 		}
 	}
 	return
 }
 
 // getCVE returns the CVE identifier if present
-func getCVE(adv *repository.Advisory) (cve *csaf.CVE) {
-	if adv.CveID != "" {
-		cve = utils.Ref(csaf.CVE(adv.CveID))
+func getCVE(adv ghsa.GHSAAdvisory) (cve *csaf.CVE) {
+	cveID := adv.GetCveID()
+	if cveID != "" {
+		cve = utils.Ref(csaf.CVE(cveID))
 	}
 	return
 }
 
 // convertScores converts GHSA CVSS into CSAF CVSS v3 only.
-//
-// Source precedence:
-// 1) GHSA cvss_severities.cvss_v3 (preferred explicit source)
-// 2) GHSA legacy cvss (backward compatibility)
-// 3) otherwise no score
-//
-// Safety rule:
-// We only accept vectors that clearly declare CVSS 3.0/3.1. Any other vector
-// version is rejected to avoid accidentally placing non-v3 semantics into CSAF cvss_v3.
-func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Score, error) {
-	// Prefer CVSS v3 from CVSSSeverities
-	var vector string
-	var scoreVal float64
-
-	if adv.CVSSSeverities.CVSSv3.VectorString != "" {
-		vector = adv.CVSSSeverities.CVSSv3.VectorString
-		scoreVal = adv.CVSSSeverities.CVSSv3.Score
-	} else if adv.CVSS.VectorString != "" {
-		// Fallback to legacy CVSS field
-		vector = adv.CVSS.VectorString
-		scoreVal = adv.CVSS.Score
-	} else {
-		// No v3-compatible score source. CVSS v4-only cases are handled via notes/logging.
+func convertScores(adv ghsa.GHSAAdvisory, productIDs csaf.Products) (*csaf.Score, error) {
+	vector, scoreVal := adv.GetCVSSv3()
+	if vector == "" {
 		return nil, nil
 	}
 
@@ -187,14 +159,15 @@ func convertScores(adv *repository.Advisory, productIDs csaf.Products) (*csaf.Sc
 }
 
 // isV4Only determines if an advisory contains only CVSS v4 data
-func isV4Only(adv *repository.Advisory) bool {
-	if adv.CVSSSeverities.CVSSv3.VectorString != "" || adv.CVSS.VectorString != "" {
+func isV4Only(adv ghsa.GHSAAdvisory) bool {
+	v3Vector, _ := adv.GetCVSSv3()
+	if v3Vector != "" {
 		return false
 	}
 
-	v4 := adv.CVSSSeverities.CVSSv4
+	v4Vector, v4Score := adv.GetCVSSv4()
 	// Check if v4 has meaningful data
-	return strings.TrimSpace(v4.VectorString) != "" || v4.Score > 0
+	return strings.TrimSpace(v4Vector) != "" || v4Score > 0
 }
 
 // calculateSeverity maps a numeric CVSS score to a severity string according to the CVSS v3.1 specification
@@ -214,13 +187,11 @@ func calculateSeverity(score float64) csaf.CVSS3Severity {
 }
 
 // getRemediations builds remediation entries using patched versions.
-// Keep each remediation aligned with its corresponding product so the
-// patched version remains product-specific instead of being flattened into
-// a single advisory-wide string.
-func getRemediations(adv *repository.Advisory, productIDs csaf.Products) csaf.Remediations {
+func getRemediations(adv ghsa.GHSAAdvisory, productIDs csaf.Products) csaf.Remediations {
 	var remediations csaf.Remediations
+	vulns := adv.GetVulnerabilities()
 
-	for i, vuln := range adv.Vulnerabilities {
+	for i, vuln := range vulns {
 		if vuln.PatchedVersions == "" || i >= len(productIDs) || productIDs[i] == nil {
 			continue
 		}

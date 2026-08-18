@@ -6,7 +6,7 @@ import (
 
 	"github.com/csaf-poc/ghsa/internal/utils"
 	"github.com/csaf-poc/ghsa/models/csaf"
-	"github.com/csaf-poc/ghsa/models/ghsa/repository"
+	"github.com/csaf-poc/ghsa/models/ghsa"
 
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
 )
@@ -15,9 +15,10 @@ import (
 // It converts GHSA vulnerability information into a CSAF product tree.
 // It builds a hierarchical structure: vendor -> product_name -> product_version_range
 // for each vulnerable package and version range in the advisory.
-func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) {
+func getProductTree(adv ghsa.GHSAAdvisory) (pt *csaf.ProductTree, err error) {
+	vulns := adv.GetVulnerabilities()
 	// In a GHSA, vulnerabilities represent affected packages along with their versions
-	if len(adv.Vulnerabilities) == 0 {
+	if len(vulns) == 0 {
 		return nil, fmt.Errorf("no affected packages found in advisory")
 	}
 	var (
@@ -25,12 +26,12 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 		productNames gocsaf.FullProductNames
 	)
 
-	for _, v := range adv.Vulnerabilities {
+	for _, v := range vulns {
 		// Include the version range in product_id so entries for the same package with
 		// different ranges stay distinct (product_id must be unique within the document).
-		productID := gocsaf.ProductID(v.Package.Name + ":" + normalizeVersionRangeForID(v.VulnerableVersionRange))
+		productID := gocsaf.ProductID(v.PackageName + ":" + normalizeVersionRangeForID(v.VulnerableVersionRange))
 		productName := &gocsaf.FullProductName{
-			Name:      getRepositoryName(v.Package.Name),
+			Name:      getRepositoryName(v.PackageName),
 			ProductID: utils.Ref(productID),
 		}
 		branch := &gocsaf.Branch{
@@ -40,11 +41,11 @@ func getProductTree(adv *repository.Advisory) (pt *csaf.ProductTree, err error) 
 			// The schema requires every branch to have a non-empty category (from the enum)
 			// and a non-empty name — so we never emit an intermediate "unnamed" branch like vendor.
 			Category: utils.Ref(gocsaf.CSAFBranchCategoryLanguage),
-			Name:     utils.Ref(v.Package.Ecosystem),
+			Name:     utils.Ref(v.Ecosystem),
 			Branches: []*gocsaf.Branch{
 				{
 					Category: utils.Ref(gocsaf.CSAFBranchCategoryProductName),
-					Name:     utils.Ref(v.Package.Name),
+					Name:     utils.Ref(v.PackageName),
 					Branches: []*gocsaf.Branch{
 						{
 							// CSAF 2.0 does not define `product_version_range`; that category was

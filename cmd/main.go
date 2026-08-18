@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/csaf-poc/ghsa/models/csaf"
-	"github.com/csaf-poc/ghsa/models/ghsa/repository"
+	"github.com/csaf-poc/ghsa/models/ghsa"
 	"github.com/csaf-poc/ghsa/service/converter"
 	"github.com/csaf-poc/ghsa/service/downloader"
 	"github.com/csaf-poc/ghsa/service/store"
@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var (
-		ghsa  *repository.Advisory
+		adv   ghsa.GHSAAdvisory
 		csafa *csaf.Advisory
 		err   error
 	)
@@ -22,14 +22,14 @@ func main() {
 
 	// Get GHSA
 	ghsaURL := os.Args[1]
-	ghsa, err = downloader.DownloadGHSA(ghsaURL)
+	adv, err = downloader.DownloadGHSA(ghsaURL)
 	if err != nil {
 		fmt.Printf("Error downloading GHSA: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Convert GHSA to CSAF
-	csafa, err = converter.ToCSAF(ghsa)
+	csafa, err = converter.ToCSAF(adv)
 	if err != nil {
 		fmt.Printf("Error converting GHSA to CSAF: %v\n", err)
 		os.Exit(1)
