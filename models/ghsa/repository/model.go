@@ -1,29 +1,33 @@
 package repository
 
+import (
+	"time"
+)
+
 // Advisory represents a GitHub Security Advisory on Repository level.
 // It was created by converting the schema for a Repository (see repository_GHSA.json in the schemas folder).
 // You can find it in the GitHub API documentation:
 // https://docs.github.com/en/rest/security-advisories/repository-advisories?apiVersion=2022-11-28#list-repository-security-advisories
 type Advisory struct {
 	GhsaID          string           `json:"ghsa_id"`          // required
-	CveID           string           `json:"cve_id"`           // required
+	CveID           *string          `json:"cve_id"`           // required, string/null
 	URL             string           `json:"url"`              // required
 	HTMLURL         string           `json:"html_url"`         // required
 	Summary         string           `json:"summary"`          // required
-	Description     string           `json:"description"`      // required
-	Severity        string           `json:"severity"`         // required
-	Author          User             `json:"author"`           // required
-	Publisher       User             `json:"publisher"`        // required
+	Description     *string          `json:"description"`      // required, string/null
+	Severity        *string          `json:"severity"`         // required, string/null
+	Author          *User            `json:"author"`           // required, object/null
+	Publisher       *User            `json:"publisher"`        // required, object/null
 	Identifiers     []Identifier     `json:"identifiers"`      // required
 	State           string           `json:"state"`            // required
-	CreatedAt       string           `json:"created_at"`       // required
-	UpdatedAt       string           `json:"updated_at"`       // required
-	PublishedAt     string           `json:"published_at"`     // required
-	ClosedAt        any              `json:"closed_at"`        // required
-	WithdrawnAt     any              `json:"withdrawn_at"`     // required
-	Submission      Submission       `json:"submission"`       // required
+	CreatedAt       *time.Time       `json:"created_at"`       // required, date-time/null
+	UpdatedAt       *time.Time       `json:"updated_at"`       // required, date-time/null
+	PublishedAt     *time.Time       `json:"published_at"`     // required, date-time/null
+	ClosedAt        *time.Time       `json:"closed_at"`        // required, date-time/null
+	WithdrawnAt     *time.Time       `json:"withdrawn_at"`     // required, date-time/null
+	Submission      *Submission      `json:"submission"`       // required, object/null
 	Vulnerabilities []Vulnerability  `json:"vulnerabilities"`  // required
-	CVSS            CVSS             `json:"cvss"`             // required
+	CVSS            CVSS             `json:"cvss"`             // required (fallback)
 	CWEs            []CWE            `json:"cwes"`             // required
 	CWEIds          []string         `json:"cwe_ids"`          // required
 	Credits         []Credit         `json:"credits"`          // required
@@ -33,8 +37,8 @@ type Advisory struct {
 	// Required. A list of teams that collaborate on the advisory
 	CollaboratingTeams []CollaborationTeam `json:"collaborating_teams"`
 	// Required. A temporary private fork of the advisory's repository for collaborating on a fix.
-	PrivateFork    Repository     `json:"private_fork"`
-	CVSSSeverities CVSSSeverities `json:"cvss_severities"`
+	PrivateFork    *Repository    `json:"private_fork"` // required, object/null
+	CVSSSeverities CVSSSeverities `json:"cvss_severities,omitempty"`
 }
 
 // Identifier represents an identification of the security advisory
@@ -57,16 +61,16 @@ type Submission struct {
 
 // Vulnerability represents a product affected by the advisory.
 type Vulnerability struct {
-	Package                Package  `json:"package"`                  // required
-	VulnerableVersionRange string   `json:"vulnerable_version_range"` // required
-	PatchedVersions        string   `json:"patched_versions"`         // required
+	Package                *Package `json:"package"`                  // required, object/null
+	VulnerableVersionRange *string  `json:"vulnerable_version_range"` // required, string/null
+	PatchedVersions        *string  `json:"patched_versions"`         // required, string/null
 	VulnerableFunctions    []string `json:"vulnerable_functions"`     // required
 }
 
 // Package represents a package affected by the vulnerability
 type Package struct {
-	Ecosystem string `json:"ecosystem"` // required
-	Name      string `json:"name"`      // required
+	Ecosystem string  `json:"ecosystem"` // required
+	Name      *string `json:"name"`      // required, string/null
 }
 
 type CVSSSeverities struct {
@@ -76,8 +80,8 @@ type CVSSSeverities struct {
 
 // CVSS represents a CVSS score
 type CVSS struct {
-	VectorString string  `json:"vector_string"` // required
-	Score        float64 `json:"score"`         // required
+	VectorString *string  `json:"vector_string"` // required, string/null
+	Score        *float64 `json:"score"`         // required, number/null
 }
 
 // CWE represents a Common Weakness Enumeration
@@ -102,28 +106,28 @@ type CreditDetailed struct {
 
 // User represents a GitHub user
 type User struct {
-	Login             string `json:"login"`               // required
-	ID                int64  `json:"id"`                  // required
-	NodeID            string `json:"node_id"`             // required
-	AvatarURL         string `json:"avatar_url"`          // required
-	GravatarID        string `json:"gravatar_id"`         // required
-	URL               string `json:"url"`                 // required
-	HTMLURL           string `json:"html_url"`            // required
-	FollowersURL      string `json:"followers_url"`       // required
-	FollowingURL      string `json:"following_url"`       // required
-	GistsURL          string `json:"gists_url"`           // required
-	Starred_URL       string `json:"starred_url"`         // required
-	SubscriptionsURL  string `json:"subscriptions_url"`   // required
-	OrganizationsURL  string `json:"organizations_url"`   // required
-	ReposURL          string `json:"repos_url"`           // required
-	EventsURL         string `json:"events_url"`          // required
-	ReceivedEventsURL string `json:"received_events_url"` // required
-	Type              string `json:"type"`                // required
-	SiteAdmin         bool   `json:"site_admin"`          // required
-	Name              string `json:"name"`
-	Email             string `json:"email"`
-	StarredAt         string `json:"starred_at"`
-	UserViewType      string `json:"user_view_type"`
+	Login             string  `json:"login"`               // required
+	ID                int64   `json:"id"`                  // required
+	NodeID            string  `json:"node_id"`             // required
+	AvatarURL         string  `json:"avatar_url"`          // required
+	GravatarID        *string `json:"gravatar_id"`         // required, string/null
+	URL               string  `json:"url"`                 // required
+	HTMLURL           string  `json:"html_url"`            // required
+	FollowersURL      string  `json:"followers_url"`       // required
+	FollowingURL      string  `json:"following_url"`       // required
+	GistsURL          string  `json:"gists_url"`           // required
+	Starred_URL       string  `json:"starred_url"`         // required
+	SubscriptionsURL  string  `json:"subscriptions_url"`   // required
+	OrganizationsURL  string  `json:"organizations_url"`   // required
+	ReposURL          string  `json:"repos_url"`           // required
+	EventsURL         string  `json:"events_url"`          // required
+	ReceivedEventsURL string  `json:"received_events_url"` // required
+	Type              string  `json:"type"`                // required
+	SiteAdmin         bool    `json:"site_admin"`          // required
+	Name              *string `json:"name,omitempty"`      // optional, string/null
+	Email             *string `json:"email,omitempty"`     // optional, string/null
+	StarredAt         *string `json:"starred_at,omitempty"`
+	UserViewType      *string `json:"user_view_type,omitempty"`
 }
 
 // CollaborationTeam represents a team collaborating on the advisory.
