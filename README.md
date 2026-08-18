@@ -40,6 +40,17 @@ If these assumptions do not align with a consumer’s taxonomy strategy or intro
 the generation of these sections can be skipped or pruned in the future—yielding a leaner CSAF advisory focused only on tracking metadata.
 
 ---
+## GHSA Source/API Decision Context
+This repository includes a small analysis of which GHSA source and GitHub API are most suitable for **GHSA -> CSAF conversion**:
+
+- [data_source_and_api_strategy.md](data_source_and_api_strategy.md)
+
+The analysis covers:
+- Repository GHSA vs Global GHSA for converter data quality and scope.
+- GraphQL vs REST capabilities with live query evidence.
+- A decision matrix and final recommendation for single-API implementation.
+
+---
 ## Limitations and Differences
 
 ### CSAF Document
