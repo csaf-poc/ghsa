@@ -124,9 +124,11 @@ go run ./cmd <GHSA_URL> <output_file>
 ```
 
 `<GHSA_URL>` is a live GitHub Security Advisory URL — the converter fetches it over HTTP.
-Both formats are accepted:
-- Browser: `https://github.com/OWNER/REPO/security/advisories/GHSA-XXXX-XXXX-XXXX`
-- API:     `https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA-XXXX-XXXX-XXXX`
+Supported formats (both repository and global):
+- Repository Browser: `https://github.com/OWNER/REPO/security/advisories/GHSA-XXXX-XXXX-XXXX`
+- Repository API:     `https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA-XXXX-XXXX-XXXX`
+- Global Browser:     `https://github.com/advisories/GHSA-XXXX-XXXX-XXXX`
+- Global API:         `https://api.github.com/advisories/GHSA-XXXX-XXXX-XXXX`
 
 Example:
 ```bash
@@ -142,6 +144,22 @@ Validate output against the CSAF 2.0 schema:
 ```bash
 python3 scripts/validate.py out.json
 ```
+
+---
+## Advisory Types and Schemas
+
+This tool supports both **Repository-level** and **Global** GitHub Security Advisories. From the perspective of running the program, there is no difference; the tool automatically detects the advisory type from the provided URL.
+
+### Schema Differences
+While they share core fields (like `ghsa_id`, `summary`, and `description`), the Repository and Global GHSA schemas are not identical:
+
+- **Repository GHSA**: Contains GitHub-specific metadata related to the repository where the advisory was reported. This includes fields like `publisher`, `author`, `state`, and `credits_detailed`.
+- **Global GHSA**: Focused on ecosystem-wide vulnerability data. It includes additional root-level information such as `epss` scores, `cwes`, and a `type` (e.g., `reviewed`, `malware`). It uses a different structure for `credits` and slightly different field names for affected versions (e.g., `first_patched_version` vs `patched_versions`).
+
+Neither schema is a strict subset of the other. Repository advisories are more publication-centric on GitHub, while Global advisories are more vulnerability-centric for the wider ecosystem.
+
+### CVSS Optionality
+A significant challenge in converting GHSA to CSAF is that **CVSS data is not mandatory in GHSA**. Since CSAF documents typically rely on standardized severity scores for automated risk assessment, the absence of CVSS in the source GHSA results in a less complete CSAF document. The converter handles missing CVSS by omitting the scores section in the output, which may limit its utility in some automated pipelines.
 
 ---
 ## Data Mapping (GHSA → CSAF)
@@ -201,7 +219,7 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 ## Roadmap
 - Fix issues
 - Perform extensive review
-- Check global GHSA
+- Support global GHSA (Done)
 - Check hidden GHSA (requires authentication probably)
 - Add CLI functionality & configuration options
 - Add more tests & validation
