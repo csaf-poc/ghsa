@@ -72,48 +72,98 @@ func DownloadGHSA(url string) (adv ghsa.GHSAAdvisory, err error) {
 // It supports both repository-level and global advisories.
 // Returns the normalized API URL, a boolean indicating if it's a global advisory, and an error.
 func normalizeGHSAURL(ghsaURL string) (apiURL string, isGlobal bool, err error) {
-	var (
-		u *url.URL
-	)
+	trimmed := strings.TrimRight(strings.TrimSpace(ghsaURL), "/")
 
-	u, err = url.Parse(ghsaURL)
+	// Accept scheme-less pastes such as "github.com/OWNER/REPO". Without a scheme
+	// url.Parse treats the host as the first path segment.
+	if !strings.Contains(trimmed, "://") &&
+		(strings.HasPrefix(trimmed, "github.com/") || strings.HasPrefix(trimmed, "api.github.com/")) {
+		trimmed = "https://" + trimmed
+	}
+
+	u, err := url.Parse(trimmed)
 	if err != nil {
 		err = fmt.Errorf("invalid URL: %w", err)
 		return
 	}
 
-	// Split URL into parts
-	parts := strings.Split(u.Path, "/")
+	// Split path into parts, removing leading/trailing slashes.
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
 
-	// Check for global advisory browser format (https://github.com/advisories/GHSA-xxxx-xxxx-xxxx)
-	if u.Host == "github.com" && len(parts) == 3 && parts[1] == "advisories" {
-		apiURL = fmt.Sprintf("https://api.github.com/advisories/%s", parts[2])
+	// Check for global advisory format.
+	// Browser: https://github.com/advisories/GHSA-xxxx-xxxx-xxxx
+	// API:     https://api.github.com/advisories/GHSA-xxxx-xxxx-xxxx
+	if (u.Host == "github.com" || u.Host == "api.github.com") &&
+		len(parts) >= 2 && parts[0] == "advisories" {
+		apiURL = fmt.Sprintf("https://api.github.com/advisories/%s", parts[1])
 		isGlobal = true
 		return
 	}
 
-	// Check for global API format (https://api.github.com/advisories/GHSA-xxxx-xxxx-xxxx)
-	if u.Host == "api.github.com" && len(parts) == 3 && parts[1] == "advisories" {
-		apiURL = ghsaURL
-		isGlobal = true
-		return
-	}
-
-	// Check for repository browser format (https://github.com/OWNER/REPO/security/advisories/GHSA_ID)
-	if u.Host == "github.com" && len(parts) == 6 && parts[3] == "security" && parts[4] == "advisories" {
-		apiURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/security-advisories/%s", parts[1], parts[2], parts[5])
+	// Check for repository advisory format.
+	// Browser: https://github.com/OWNER/REPO/security/advisories/GHSA_ID
+	// API:     https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID
+	if u.Host == "github.com" && len(parts) == 5 && parts[2] == "security" && parts[3] == "advisories" {
+		apiURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/security-advisories/%s", parts[0], parts[1], parts[4])
 		isGlobal = false
 		return
 	}
 
-	// Check for repository API format (https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA_ID)
-	if u.Host == "api.github.com" && len(parts) == 6 && parts[1] == "repos" && parts[4] == "security-advisories" {
-		apiURL = ghsaURL
+	if u.Host == "api.github.com" && len(parts) == 5 && parts[0] == "repos" && parts[3] == "security-advisories" {
+		apiURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/security-advisories/%s", parts[1], parts[2], parts[4])
 		isGlobal = false
 		return
 	}
 
 	// Unsupported URL format
+	if owner, repo, ok := parseRepositoryInput(trimmed); ok {
+		return fmt.Sprintf("https://api.github.com/repos/%s/%s/security-advisories", owner, repo), false, nil
+	}
+
 	err = fmt.Errorf("unsupported URL: %s. Expected repository or global advisory URL", ghsaURL)
 	return
+}
+
+// parseRepositoryInput recognizes the repository-level forms and extracts owner
+// and repository name.
+func parseRepositoryInput(input string) (owner, repo string, ok bool) {
+	u, err := url.Parse(input)
+	if err != nil {
+		return "", "", false
+	}
+
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	for _, p := range parts {
+		if p == "" {
+			return "", "", false
+		}
+	}
+
+	switch strings.ToLower(u.Host) {
+	case "github.com":
+		// OWNER/REPO — but never advisories/GHSA-xxxx, which is a global advisory.
+		if len(parts) == 2 && parts[0] != "advisories" {
+			return parts[0], strings.TrimSuffix(parts[1], ".git"), true
+		}
+		// OWNER/REPO/security/advisories
+		if len(parts) == 4 && parts[2] == "security" && parts[3] == "advisories" {
+			return parts[0], parts[1], true
+		}
+	case "api.github.com":
+		// repos/OWNER/REPO
+		if len(parts) == 3 && parts[0] == "repos" {
+			return parts[1], parts[2], true
+		}
+		// repos/OWNER/REPO/security-advisories
+		if len(parts) == 4 && parts[0] == "repos" && parts[3] == "security-advisories" {
+			return parts[1], parts[2], true
+		}
+	case "":
+		// Bare OWNER/REPO
+		if len(parts) == 2 && parts[0] != "advisories" {
+			return parts[0], strings.TrimSuffix(parts[1], ".git"), true
+		}
+	}
+
+	return "", "", false
 }

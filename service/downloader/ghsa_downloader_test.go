@@ -99,33 +99,37 @@ func TestCheckURL(t *testing.T) {
 		urlStr string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr assert.ErrorAssertionFunc
+		name         string
+		args         args
+		want         string
+		wantIsGlobal bool
+		wantErr      assert.ErrorAssertionFunc
 	}{
 		{
 			name: "Valid API URL",
 			args: args{
 				urlStr: "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
 			},
-			want:    "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
-			wantErr: assert.NoError,
+			want:         "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
+			wantIsGlobal: false,
+			wantErr:      assert.NoError,
 		},
 		{
 			name: "Valid Browser URL",
 			args: args{
 				urlStr: "https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp",
 			},
-			want:    "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
-			wantErr: assert.NoError,
+			want:         "https://api.github.com/repos/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
+			wantIsGlobal: false,
+			wantErr:      assert.NoError,
 		},
 		{
 			name: "Invalid API URL format (missing 'repos' part)",
 			args: args{
 				urlStr: "https://api.github.com/golang-jwt/jwt/security-advisories/GHSA-mh63-6h87-95cp",
 			},
-			want: "",
+			want:         "",
+			wantIsGlobal: false,
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.Contains(t, err.Error(), "unsupported URL")
 			},
@@ -135,7 +139,8 @@ func TestCheckURL(t *testing.T) {
 			args: args{
 				urlStr: "https://gitlab.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp",
 			},
-			want: "",
+			want:         "",
+			wantIsGlobal: false,
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.Contains(t, err.Error(), "unsupported URL")
 			},
@@ -145,18 +150,67 @@ func TestCheckURL(t *testing.T) {
 			args: args{
 				urlStr: ":",
 			},
-			want: "",
+			want:         "",
+			wantIsGlobal: false,
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.Contains(t, err.Error(), "invalid URL")
 			},
 		},
+		{
+			name: "Global browser URL",
+			args: args{
+				urlStr: "https://github.com/advisories/GHSA-xxxx-xxxx-xxxx",
+			},
+			want:         "https://api.github.com/advisories/GHSA-xxxx-xxxx-xxxx",
+			wantIsGlobal: true,
+			wantErr:      assert.NoError,
+		},
+		{
+			name: "Global API URL",
+			args: args{
+				urlStr: "https://api.github.com/advisories/GHSA-xxxx-xxxx-xxxx",
+			},
+			want:         "https://api.github.com/advisories/GHSA-xxxx-xxxx-xxxx",
+			wantIsGlobal: true,
+			wantErr:      assert.NoError,
+		},
+		{
+			name: "Repository listing browser URL",
+			args: args{
+				urlStr: "https://github.com/OWNER/REPO",
+			},
+			want:         "https://api.github.com/repos/OWNER/REPO/security-advisories",
+			wantIsGlobal: false,
+			wantErr:      assert.NoError,
+		},
+		{
+			name: "Repository security advisories browser URL",
+			args: args{
+				urlStr: "https://github.com/OWNER/REPO/security/advisories",
+			},
+			want:         "https://api.github.com/repos/OWNER/REPO/security-advisories",
+			wantIsGlobal: false,
+			wantErr:      assert.NoError,
+		},
+		{
+			name: "Bare OWNER/REPO",
+			args: args{
+				urlStr: "OWNER/REPO",
+			},
+			want:         "https://api.github.com/repos/OWNER/REPO/security-advisories",
+			wantIsGlobal: false,
+			wantErr:      assert.NoError,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _, err := normalizeGHSAURL(tt.args.urlStr)
+			got, gotIsGlobal, err := normalizeGHSAURL(tt.args.urlStr)
 			tt.wantErr(t, err)
 			if got != tt.want {
 				t.Errorf("normalizeGHSAURL() got = %v, want %v", got, tt.want)
+			}
+			if gotIsGlobal != tt.wantIsGlobal {
+				t.Errorf("normalizeGHSAURL() gotIsGlobal = %v, want %v", gotIsGlobal, tt.wantIsGlobal)
 			}
 		})
 	}
