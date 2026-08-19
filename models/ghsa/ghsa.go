@@ -19,6 +19,13 @@ type GHSAAdvisory interface {
 	GetVulnerabilities() []CommonVulnerability
 	GetCredits() []CommonCredit
 	GetPublisher() *CommonUser
+	GetEPSS() *CommonEPSS
+}
+
+// CommonEPSS represents Exploit Prediction Scoring System data.
+type CommonEPSS struct {
+	Percentage float64
+	Percentile float64
 }
 
 // CommonIdentifier represents a GHSA identifier (CVE or GHSA ID).

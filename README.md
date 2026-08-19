@@ -188,6 +188,7 @@ A significant challenge in converting GHSA to CSAF is that **CVSS data is not ma
 - GHSA advisory ID → `document.tracking.id` and vulnerability IDs list.
 - CVE (if present) → `vulnerabilities[].cve`.
 - Package ecosystem/name → Product tree branches.
+- EPSS → Vulnerability note (if present in Global GHSA).
 - Severity / CVSS → `vulnerabilities[].scores[]` with score type set appropriately.
 - References (URLs) → `vulnerabilities[].references[]`.
 - Published / Updated timestamps → `document.tracking.revision_history[]` entries.
@@ -217,14 +218,10 @@ A more robust long‑term solution would be either (a) bypassing `gocsaf.SaveAdv
 ---
 ## Examples
 See `examples/` directory:
-- `global_GHSA/GHSA-cpj6-fhp6-mr6j.json` (global advisory input).
-- `repository_GHSA/GHSA-mh63-6h87-95cp.json` (repository advisory input).
+- `global_GHSA/GHSA-mh63-6h87-95cp.json` (original global GHSA input).
+- `global_GHSA/ghsa-mh63-6h87-95cp.json` (converted CSAF output with EPSS).
+- `repository_GHSA/GHSA-mh63-6h87-95cp.json` (original repository GHSA input).
 - `repository_GHSA/csaf_example_output.json` (sample converted CSAF output).
-
-You can diff the input vs. output to observe:
-- Product tree hierarchy creation.
-- Revision history entries.
-- Identifier and reference mappings.
 
 ---
 ## Troubleshooting
