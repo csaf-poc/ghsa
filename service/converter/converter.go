@@ -20,17 +20,23 @@ func ToCSAF(adv ghsa.GHSAAdvisory) (csafadvisory *csaf.Advisory, err error) {
 	slog.Info("Converting advisory to CSAF document",
 		slog.String("GHSA ID", adv.GetGhsaID()))
 
+	// Each step must return on error: the later steps consume the earlier results
+	// (getVulnerabilities dereferences the product tree), so continuing after a
+	// failure would panic instead of surfacing the error.
 	d, err = getDocument(adv)
 	if err != nil {
 		err = fmt.Errorf("could not extract csaf document: %v", err)
+		return
 	}
 	pt, err = getProductTree(adv)
 	if err != nil {
 		err = fmt.Errorf("could not extract csaf product tree: %v", err)
+		return
 	}
 	v, err = getVulnerabilities(adv, pt)
 	if err != nil {
 		err = fmt.Errorf("could not extract csaf vulnerabilities: %v", err)
+		return
 	}
 
 	csafadvisory = &csaf.Advisory{

@@ -131,24 +131,31 @@ Prerequisites: Go ≥ 1.21.
 
 Run converter:
 ```bash
-go run ./cmd <GHSA_URL> <output_file>
+go run cmd/main.go <GHSA_INPUT> <OUTPUT_TARGET>
 ```
 
-`<GHSA_URL>` is a live GitHub Security Advisory URL — the converter fetches it over HTTP.
-Supported formats (both repository and global):
+`<GHSA_INPUT>` can be:
+- A single GHSA URL (browser or API).
+- A repository URL (browser, API, or bare `OWNER/REPO`) to fetch and convert **all** published advisories for that repository.
+
+`<OUTPUT_TARGET>` can be:
+- A filename (for a single advisory).
+- A directory (for batch processing repository listings). If the directory doesn't exist, it will be created. Filenames in batch mode are derived from the GHSA ID (lowercase).
+
+Supported URL formats (both repository and global):
+- Repository Listing: `https://github.com/OWNER/REPO`, `OWNER/REPO`, `https://github.com/OWNER/REPO/security/advisories`
 - Repository Browser: `https://github.com/OWNER/REPO/security/advisories/GHSA-XXXX-XXXX-XXXX`
-- Repository API:     `https://api.github.com/repos/OWNER/REPO/security-advisories/GHSA-XXXX-XXXX-XXXX`
 - Global Browser:     `https://github.com/advisories/GHSA-XXXX-XXXX-XXXX`
-- Global API:         `https://api.github.com/advisories/GHSA-XXXX-XXXX-XXXX`
+- API equivalents for all the above.
 
-Example:
+Example (single):
 ```bash
-go run ./cmd https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp out.json
+go run cmd/main.go https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp out.json
 ```
 
-Inspect output:
+Example (batch repository):
 ```bash
-jq . out.json
+go run cmd/main.go https://github.com/golang-jwt/jwt advisories_output/
 ```
 
 Validate output against the CSAF 2.0 schema:
@@ -228,12 +235,13 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 
 ---
 ## Roadmap
-- Fix issues
-- Perform extensive review
-- Support global GHSA (Done)
-- Check hidden GHSA (requires authentication probably)
-- Add CLI functionality & configuration options
-- Add more tests & validation
+- [x] Support global GHSA
+- [x] Support repository advisory listings (batch processing)
+- [x] Systematic output handling (file vs directory)
+- [ ] Check if CLI could be improved
+- [ ] Check hidden GHSA (requires authentication/GITHUB_TOKEN)
+- [ ] Extensive review & additional tests
+- [ ] Optional: Retrivel all GHSAs from an organization
 
 ---
 ## License and Acknowledgments
