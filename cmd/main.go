@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
-	"github.com/csaf-poc/ghsa/models/csaf"
 	"github.com/csaf-poc/ghsa/models/ghsa"
 	"github.com/csaf-poc/ghsa/service/converter"
 	"github.com/csaf-poc/ghsa/service/downloader"
@@ -14,32 +14,59 @@ import (
 
 func main() {
 	var (
-		adv   ghsa.GHSAAdvisory
-		csafa *csaf.Advisory
-		err   error
+		advisories []ghsa.GHSAAdvisory
+		err        error
 	)
 	checkInput()
 
-	// Get GHSA
+	// Get GHSA(s)
 	ghsaURL := os.Args[1]
-	adv, err = downloader.DownloadGHSA(ghsaURL)
+	advisories, err = downloader.FetchAdvisories(ghsaURL)
 	if err != nil {
-		fmt.Printf("Error downloading GHSA: %v\n", err)
+		fmt.Printf("Error fetching advisories: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Convert GHSA to CSAF
-	csafa, err = converter.ToCSAF(adv)
-	if err != nil {
-		fmt.Printf("Error converting GHSA to CSAF: %v\n", err)
-		os.Exit(1)
+	outputBase := os.Args[2]
+	isDir := false
+	if info, err := os.Stat(outputBase); err == nil && info.IsDir() {
+		isDir = true
 	}
 
-	// Store CSAF
-	err = store.Save(csafa, os.Args[2])
-	if err != nil {
-		fmt.Printf("Error saving CSAF: %v\n", err)
-		os.Exit(1)
+	for _, adv := range advisories {
+		// Convert GHSA to CSAF
+		csafa, err := converter.ToCSAF(adv)
+		if err != nil {
+			fmt.Printf("Error converting GHSA %s to CSAF: %v\n", adv.GetGhsaID(), err)
+			continue
+		}
+
+		// Determine filename
+		var filename string
+		if isDir {
+			filename = fmt.Sprintf("%s/%s.json", strings.TrimSuffix(outputBase, "/"), adv.GetGhsaID())
+		} else if len(advisories) > 1 {
+			// If multiple advisories but outputBase is not a directory, we use it as a prefix or fail?
+			// Let's use it as a directory if it doesn't exist yet and we have multiple advisories.
+			if _, err := os.Stat(outputBase); os.IsNotExist(err) {
+				if err := os.MkdirAll(outputBase, 0755); err == nil {
+					isDir = true
+					filename = fmt.Sprintf("%s/%s.json", strings.TrimSuffix(outputBase, "/"), adv.GetGhsaID())
+				} else {
+					filename = fmt.Sprintf("%s-%s.json", outputBase, adv.GetGhsaID())
+				}
+			} else {
+				filename = fmt.Sprintf("%s-%s.json", outputBase, adv.GetGhsaID())
+			}
+		} else {
+			filename = outputBase
+		}
+
+		// Store CSAF
+		err = store.Save(csafa, filename)
+		if err != nil {
+			fmt.Printf("Error saving CSAF for %s: %v\n", adv.GetGhsaID(), err)
+		}
 	}
 }
 
