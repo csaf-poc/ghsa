@@ -241,7 +241,7 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 - [ ] Check if CLI could be improved
 - [ ] Check hidden GHSA (requires authentication/GITHUB_TOKEN)
 - [ ] Extensive review & additional tests
-- [ ] Perform validation against more edge cases
+- [ ] Optional: Retrivel all GHSAs from an organization
 
 ---
 ## License and Acknowledgments
