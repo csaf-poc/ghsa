@@ -163,7 +163,7 @@ func normalizeGHSAURL(ghsaURL string) (apiURL string, isGlobal bool, isListing b
 	return
 }
 
-// parseRepositoryInput recognizes the repository-level forms and extracts owner
+// parseRepositoryInput recognizes the repository-level layout and extracts owner
 // and repository name.
 func parseRepositoryInput(input string) (owner, repo string, ok bool) {
 	u, err := url.Parse(input)

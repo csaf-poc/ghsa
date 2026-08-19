@@ -14,34 +14,19 @@ import (
 )
 
 const (
-	// githubAPIVersion pins the REST API version we were developed against, as
-	// documented for "List repository security advisories".
-	//
-	// The header is not mandatory: omitting it also returns 200 with an identical
-	// payload, because GitHub then applies its own default version. We still send
-	// it so that a future change of that default cannot silently alter the
-	// response shape we unmarshal. An unknown value is rejected with 400, so the
-	// value is validated rather than ignored.
-	githubAPIVersion = "2026-03-10"
-
 	// advisoryPageSize is the page size requested per listing call. The endpoint
-	// documents a default of 30 and no maximum; 100 is GitHub's usual cap.
+	// documents a default of 30 and no maximum
 	advisoryPageSize = 100
 
 	// advisoryState restricts the listing to published advisories.
 	//
 	// The endpoint also serves `draft` and `triage` advisories to callers with
-	// sufficient permissions, but those are embargoed, not-yet-public
+	// sufficient permissions, but those are not-yet-public
 	// vulnerability reports and converting them is wrong for two reasons:
 	// CSAF requires `/document/tracking/initial_release_date`, which is derived
 	// from `published_at` and is null while unpublished; and the converter emits
 	// `/document/tracking/status` as `final`, which would misstate a draft.
-	// Exposing other states needs an explicit opt-in flag, not a default.
 	advisoryState = "published"
-
-	// maxAdvisoryPages bounds the pagination walk so that a malformed or looping
-	// Link header cannot spin forever against the API.
-	maxAdvisoryPages = 100
 )
 
 // ListRepositoryAdvisories fetches all published security advisories for a
@@ -88,12 +73,7 @@ func ListRepositoryAdvisories(owner, repo string) (advisories []ghsa.GHSAAdvisor
 func listAdvisoryPages(startURL string) (all []repository.Advisory, err error) {
 	// Collect every page into one slice before any pointers are handed out, so
 	// the addresses taken by the caller stay valid after the final append.
-	for pageURL, page := startURL, 1; pageURL != ""; page++ {
-		if page > maxAdvisoryPages {
-			err = fmt.Errorf("aborted after %d pages: the API kept offering a next-page cursor", maxAdvisoryPages)
-			return nil, err
-		}
-
+	for pageURL := startURL; pageURL != ""; {
 		var (
 			body       []byte
 			linkHeader string
@@ -110,7 +90,6 @@ func listAdvisoryPages(startURL string) (all []repository.Advisory, err error) {
 
 		all = append(all, batch...)
 		slog.Debug("Fetched advisory page",
-			slog.Int("page", page),
 			slog.Int("advisories in page", len(batch)),
 			slog.Int("advisories so far", len(all)))
 
@@ -133,7 +112,6 @@ func getGitHubAPI(apiURL string) (body []byte, linkHeader string, err error) {
 		return nil, "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", githubAPIVersion)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
