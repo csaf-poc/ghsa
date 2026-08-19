@@ -133,16 +133,17 @@ Prerequisites: Go ≥ 1.21.
 
 Run converter:
 ```bash
-go run cmd/main.go <GHSA_INPUT> <OUTPUT_TARGET>
+go run cmd/main.go <GHSA_INPUT> [OUTPUT_TARGET]
 ```
 
 `<GHSA_INPUT>` can be:
 - A single GHSA URL (browser or API).
 - A repository URL (browser, API, or bare `OWNER/REPO`) to fetch and convert **all** published advisories for that repository.
 
-`<OUTPUT_TARGET>` can be:
+`[OUTPUT_TARGET]` is optional and can be:
 - A filename (for a single advisory).
 - A directory (for batch processing repository listings). If the directory doesn't exist, it will be created. Filenames in batch mode are derived from the GHSA ID (lowercase).
+- **If omitted**, the output filename defaults to `<ghsa_id>.json` in the current directory (or a directory for batch mode).
 
 Supported URL formats (both repository and global):
 - Repository Listing: `https://github.com/OWNER/REPO`, `OWNER/REPO`, `https://github.com/OWNER/REPO/security/advisories`
@@ -152,8 +153,9 @@ Supported URL formats (both repository and global):
 
 Example (single):
 ```bash
-go run cmd/main.go https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp out.json
+go run cmd/main.go https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp
 ```
+(Outputs to `ghsa-mh63-6h87-95cp.json`)
 
 Example (batch repository):
 ```bash
@@ -162,7 +164,7 @@ go run cmd/main.go https://github.com/golang-jwt/jwt advisories_output/
 
 Validate output against the CSAF 2.0 schema:
 ```bash
-python3 scripts/validate.py out.json
+python3 scripts/validate.py ghsa-mh63-6h87-95cp.json
 ```
 
 ---

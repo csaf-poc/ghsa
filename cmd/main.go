@@ -28,10 +28,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	outputBase := os.Args[2]
+	var outputBase string
+	if len(os.Args) > 2 {
+		outputBase = os.Args[2]
+	}
+
 	isDir := false
-	if info, err := os.Stat(outputBase); err == nil && info.IsDir() {
-		isDir = true
+	if outputBase != "" {
+		if info, err := os.Stat(outputBase); err == nil && info.IsDir() {
+			isDir = true
+		}
 	}
 
 	// Determine output mode and process advisories
@@ -48,7 +54,10 @@ func main() {
 
 		// Determine filename
 		var filename string
-		if isDir {
+		if outputBase == "" {
+			// Default output filename if not provided
+			filename = strings.ToLower(adv.GetGhsaID()) + ".json"
+		} else if isDir {
 			// Systematic directory output
 			filename = filepath.Join(outputBase, strings.ToLower(adv.GetGhsaID())+".json")
 		} else if len(advisories) > 1 {
@@ -92,13 +101,11 @@ func main() {
 
 // checkInput validates CLI arguments and prints usage on mismatch.
 func checkInput() {
-	if length := len(os.Args); length != 3 {
-		fmt.Printf("Usage: %s <GHSA_URL> <file_name>\n", os.Args[0])
+	if length := len(os.Args); length < 2 || length > 3 {
+		fmt.Printf("Usage: %s <GHSA_URL> [file_name]\n", os.Args[0])
 		switch length {
 		case 1:
 			slog.Info("Provided no arguments at all")
-		case 2:
-			slog.Info("Provided arguments", slog.Any("<GHSA_URL>", os.Args[1]))
 		default:
 			slog.Info("Provided too many arguments", slog.Any("Argument number", length-1))
 		}
