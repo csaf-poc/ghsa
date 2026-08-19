@@ -237,13 +237,15 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 
 ---
 ## Roadmap
-- [x] Support global GHSA
-- [x] Support repository advisory listings (batch processing)
+- [x] Support (single) repository GHSA
+- [x] Support (single) global GHSA
+- [x] Support fetching all repository GHSAs from a repositories
 - [x] Systematic output handling (file vs directory)
-- [ ] Check if CLI could be improved
-- [ ] Check hidden GHSA (requires authentication/GITHUB_TOKEN)
+- [x] Examine if using GraphQL would be benificial 
+- [ ] CLI with flags (currently in the experimental phase)
 - [ ] Extensive review & additional tests
 - [ ] Optional: Retrivel all GHSAs from an organization
+- [ ] Optional: Check hidden GHSA (requires authentication/GITHUB_TOKEN)
 
 ---
 ## License and Acknowledgments
