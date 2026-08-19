@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/csaf-poc/ghsa/models/ghsa"
@@ -33,41 +34,60 @@ func main() {
 		isDir = true
 	}
 
+	// Determine output mode and process advisories
+	successCount := 0
 	for _, adv := range advisories {
 		// Convert GHSA to CSAF
 		csafa, err := converter.ToCSAF(adv)
 		if err != nil {
-			fmt.Printf("Error converting GHSA %s to CSAF: %v\n", adv.GetGhsaID(), err)
+			slog.Error("Error converting GHSA to CSAF",
+				slog.String("GHSA ID", adv.GetGhsaID()),
+				slog.Any("error", err))
 			continue
 		}
 
 		// Determine filename
 		var filename string
 		if isDir {
-			filename = fmt.Sprintf("%s/%s.json", strings.TrimSuffix(outputBase, "/"), adv.GetGhsaID())
+			// Systematic directory output
+			filename = filepath.Join(outputBase, strings.ToLower(adv.GetGhsaID())+".json")
 		} else if len(advisories) > 1 {
-			// If multiple advisories but outputBase is not a directory, we use it as a prefix or fail?
-			// Let's use it as a directory if it doesn't exist yet and we have multiple advisories.
+			// Batch into a new directory if it doesn't exist, otherwise use prefix
 			if _, err := os.Stat(outputBase); os.IsNotExist(err) {
 				if err := os.MkdirAll(outputBase, 0755); err == nil {
 					isDir = true
-					filename = fmt.Sprintf("%s/%s.json", strings.TrimSuffix(outputBase, "/"), adv.GetGhsaID())
+					filename = filepath.Join(outputBase, strings.ToLower(adv.GetGhsaID())+".json")
 				} else {
-					filename = fmt.Sprintf("%s-%s.json", outputBase, adv.GetGhsaID())
+					filename = fmt.Sprintf("%s-%s.json", outputBase, strings.ToLower(adv.GetGhsaID()))
 				}
 			} else {
-				filename = fmt.Sprintf("%s-%s.json", outputBase, adv.GetGhsaID())
+				filename = fmt.Sprintf("%s-%s.json", outputBase, strings.ToLower(adv.GetGhsaID()))
 			}
 		} else {
+			// Single file output
 			filename = outputBase
 		}
 
 		// Store CSAF
 		err = store.Save(csafa, filename)
 		if err != nil {
-			fmt.Printf("Error saving CSAF for %s: %v\n", adv.GetGhsaID(), err)
+			slog.Error("Error saving CSAF",
+				slog.String("GHSA ID", adv.GetGhsaID()),
+				slog.String("filename", filename),
+				slog.Any("error", err))
+			continue
 		}
+		successCount++
 	}
+
+	if len(advisories) > 0 && successCount == 0 {
+		slog.Error("Failed to process any advisories")
+		os.Exit(1)
+	}
+
+	slog.Info("Processing complete",
+		slog.Int("total", len(advisories)),
+		slog.Int("successful", successCount))
 }
 
 // checkInput validates CLI arguments and prints usage on mismatch.
