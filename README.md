@@ -133,16 +133,39 @@ Prerequisites: Go ≥ 1.21.
 
 Run converter:
 ```bash
+# Legacy style (positional arguments)
 go run cmd/main.go <GHSA_INPUT> <OUTPUT_TARGET>
+
+# Flag style (explicit flags)
+go run cmd/main.go [-o OUTPUT] [-global ID | -allFromRepo OWNER/REPO | -repo OWNER/REPO -advisory ID]
 ```
 
-`<GHSA_INPUT>` can be:
+`<GHSA_INPUT>` (or flag values) can be:
 - A single GHSA URL (browser or API).
 - A repository URL (browser, API, or bare `OWNER/REPO`) to fetch and convert **all** published advisories for that repository.
 
-`<OUTPUT_TARGET>` can be:
-- A filename (for a single advisory).
-- A directory (for batch processing repository listings). If the directory doesn't exist, it will be created. Filenames in batch mode are derived from the GHSA ID (lowercase).
+Flags:
+- `-global <ID>`: Fetch a global GHSA by ID (e.g., `GHSA-cpj6-fhp6-mr6j`).
+- `-repo <OWNER/REPO>`: Repository owner and name. Must be used with `-advisory`.
+- `-advisory <ID>`: Specific GHSA ID to fetch from the repository specified in `-repo`.
+- `-allFromRepo <OWNER/REPO>`: Fetch all advisories for the given repository.
+- `-o <PATH>`: Output file (for single) or directory (for batch). If omitted, defaults to `<ID>.json` for single advisories and `advisories/` directory for batch processing.
+
+Example (single - positional style, output omitted):
+```bash
+go run cmd/main.go https://github.com/advisories/GHSA-cpj6-fhp6-mr6j
+# Saves to ghsa-cpj6-fhp6-mr6j.json
+```
+
+Example (single - flag style):
+```bash
+go run cmd/main.go -global GHSA-cpj6-fhp6-mr6j -o out.json
+```
+
+Example (batch - flag style):
+```bash
+go run cmd/main.go -allFromRepo golang-jwt/jwt -o advisories_output/
+```
 
 Supported URL formats (both repository and global):
 - Repository Listing: `https://github.com/OWNER/REPO`, `OWNER/REPO`, `https://github.com/OWNER/REPO/security/advisories`
@@ -240,7 +263,7 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 - [x] Support global GHSA
 - [x] Support repository advisory listings (batch processing)
 - [x] Systematic output handling (file vs directory)
-- [ ] Check if CLI could be improved
+- [x] Support flag-based CLI alongside legacy positional arguments
 - [ ] Check hidden GHSA (requires authentication/GITHUB_TOKEN)
 - [ ] Extensive review & additional tests
 - [ ] Optional: Retrivel all GHSAs from an organization

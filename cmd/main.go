@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -17,18 +18,73 @@ func main() {
 	var (
 		advisories []ghsa.GHSAAdvisory
 		err        error
+		output     string
 	)
-	checkInput()
 
-	// Get GHSA(s)
-	ghsaURL := os.Args[1]
-	advisories, err = downloader.FetchAdvisories(ghsaURL)
+	// Define flags
+	globalFlag := flag.String("global", "", "Fetch a global GHSA by ID (e.g., GHSA-cpj6-fhp6-mr6j)")
+	repoFlag := flag.String("repo", "", "Repository owner/name (e.g., golang-jwt/jwt)")
+	advisoryFlag := flag.String("advisory", "", "Specific GHSA ID to fetch from a repository (use with -repo)")
+	allFromRepoFlag := flag.String("allFromRepo", "", "Fetch all GHSA from a repository owner/name (e.g., golang-jwt/jwt)")
+	outputFlag := flag.String("o", "", "Output file or directory")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  Legacy style:   %s <GHSA_URL_OR_REPO> <OUTPUT_PATH>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  Flag style:     %s [-o OUTPUT] [-global ID | -allFromRepo OWNER/REPO | -repo OWNER/REPO -advisory ID]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Flags:\n")
+		flag.PrintDefaults()
+	}
+
+	flag.Parse()
+
+	// Determine input and output
+	if *globalFlag != "" || *repoFlag != "" || *allFromRepoFlag != "" {
+		// Flag-based mode
+		output = *outputFlag
+		if *globalFlag != "" {
+			url := fmt.Sprintf("https://github.com/advisories/%s", *globalFlag)
+			advisories, err = downloader.FetchAdvisories(url)
+		} else if *allFromRepoFlag != "" {
+			advisories, err = downloader.FetchAdvisories(*allFromRepoFlag)
+		} else if *repoFlag != "" {
+			if *advisoryFlag == "" {
+				fmt.Println("Error: -advisory ID must be specified when using -repo")
+				flag.Usage()
+				os.Exit(1)
+			}
+			url := fmt.Sprintf("https://github.com/advisories/%s/%s/security/advisories/%s", strings.Split(*repoFlag, "/")[0], strings.Split(*repoFlag, "/")[1], *advisoryFlag)
+			// Actually, normalizeGHSAURL handles https://github.com/OWNER/REPO/security/advisories/ID
+			url = fmt.Sprintf("https://github.com/%s/security/advisories/%s", *repoFlag, *advisoryFlag)
+			advisories, err = downloader.FetchAdvisories(url)
+		}
+	} else if flag.NArg() == 1 || flag.NArg() == 2 {
+		// Legacy positional mode
+		input := flag.Arg(0)
+		if flag.NArg() == 2 {
+			output = flag.Arg(1)
+		}
+		advisories, err = downloader.FetchAdvisories(input)
+	} else {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	if err != nil {
 		fmt.Printf("Error fetching advisories: %v\n", err)
 		os.Exit(1)
 	}
 
-	outputBase := os.Args[2]
+	if len(advisories) > 0 && output == "" {
+		if len(advisories) == 1 {
+			output = strings.ToLower(advisories[0].GetGhsaID()) + ".json"
+		} else {
+			output = "advisories" // default directory name for multiple
+		}
+		slog.Info("No output specified, using default", slog.String("output", output))
+	}
+
+	outputBase := output
 	isDir := false
 	if info, err := os.Stat(outputBase); err == nil && info.IsDir() {
 		isDir = true
@@ -88,20 +144,4 @@ func main() {
 	slog.Info("Processing complete",
 		slog.Int("total", len(advisories)),
 		slog.Int("successful", successCount))
-}
-
-// checkInput validates CLI arguments and prints usage on mismatch.
-func checkInput() {
-	if length := len(os.Args); length != 3 {
-		fmt.Printf("Usage: %s <GHSA_URL> <file_name>\n", os.Args[0])
-		switch length {
-		case 1:
-			slog.Info("Provided no arguments at all")
-		case 2:
-			slog.Info("Provided arguments", slog.Any("<GHSA_URL>", os.Args[1]))
-		default:
-			slog.Info("Provided too many arguments", slog.Any("Argument number", length-1))
-		}
-		os.Exit(1)
-	}
 }
