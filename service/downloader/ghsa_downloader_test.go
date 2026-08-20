@@ -242,6 +242,16 @@ func TestCheckURL(t *testing.T) {
 			wantIsListing: true,
 			wantErr:       assert.NoError,
 		},
+		{
+			name: "Bare GHSA ID",
+			args: args{
+				urlStr: "GHSA-cpj6-fhp6-mr6j",
+			},
+			want:          "https://api.github.com/advisories/GHSA-cpj6-fhp6-mr6j",
+			wantIsGlobal:  true,
+			wantIsListing: false,
+			wantErr:       assert.NoError,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -107,6 +107,14 @@ func DownloadGHSAFromAPI(normalizedURL string, isGlobal bool) (adv ghsa.GHSAAdvi
 func normalizeGHSAURL(ghsaURL string) (apiURL string, isGlobal bool, isListing bool, err error) {
 	trimmed := strings.TrimRight(strings.TrimSpace(ghsaURL), "/")
 
+	// 0. Check for bare GHSA ID
+	if strings.HasPrefix(strings.ToUpper(trimmed), "GHSA-") {
+		apiURL = fmt.Sprintf("https://api.github.com/advisories/%s", trimmed)
+		isGlobal = true
+		isListing = false
+		return
+	}
+
 	// Accept scheme-less pastes such as "github.com/OWNER/REPO". Without a scheme
 	// url.Parse treats the host as the first path segment.
 	if !strings.Contains(trimmed, "://") &&
