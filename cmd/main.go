@@ -229,17 +229,3 @@ func runConversion(advisories []ghsa.GHSAAdvisory, output string) {
 		slog.Int("total", len(advisories)),
 		slog.Int("successful", successCount))
 }
-
-// checkInput validates CLI arguments and prints usage on mismatch.
-func checkInput() {
-	if length := len(os.Args); length < 2 || length > 3 {
-		fmt.Printf("Usage: %s <GHSA_URL> [file_name]\n", os.Args[0])
-		switch length {
-		case 1:
-			slog.Info("Provided no arguments at all")
-		default:
-			slog.Info("Provided too many arguments", slog.Any("Argument number", length-1))
-		}
-		os.Exit(1)
-	}
-}
