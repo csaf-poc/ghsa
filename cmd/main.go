@@ -14,6 +14,7 @@ import (
 	"github.com/csaf-poc/ghsa/service/store"
 )
 
+// printUsage prints the help message for the CLI.
 func printUsage() {
 	fmt.Fprintf(os.Stderr, "ghsaToCSAF - A tool to convert GitHub Security Advisories to CSAF\n\n")
 	fmt.Fprintf(os.Stderr, "Usage:\n")
@@ -67,7 +68,7 @@ func main() {
 		printUsage()
 		os.Exit(0)
 	default:
-		// Try auto-detection for anything else (legacy/direct mode)
+		// Use auto-detection for anything else
 		advisories, output, err = handleAuto(flag.Args(), output)
 	}
 
@@ -94,6 +95,7 @@ func main() {
 	runConversion(advisories, output)
 }
 
+// handleGlobal handles the 'global' subcommand to fetch a specific advisory from the global GitHub database.
 func handleGlobal(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
 	fs := flag.NewFlagSet("global", flag.ContinueOnError)
 	o := fs.String("o", output, "Output destination")
@@ -107,6 +109,7 @@ func handleGlobal(args []string, output string) ([]ghsa.GHSAAdvisory, string, er
 	return advs, *o, err
 }
 
+// handleRepository handles the 'repository' subcommand to fetch a specific security advisory from a repository.
 func handleRepository(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
 	fs := flag.NewFlagSet("repository", flag.ContinueOnError)
 	o := fs.String("o", output, "Output destination")
@@ -132,6 +135,7 @@ func handleRepository(args []string, output string) ([]ghsa.GHSAAdvisory, string
 	return advs, *o, err
 }
 
+// handleAll handles the 'allOfRepository' subcommand to fetch all published advisories for a given repository.
 func handleAll(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
 	fs := flag.NewFlagSet("allOfRepository", flag.ContinueOnError)
 	o := fs.String("o", output, "Output destination")
@@ -145,6 +149,7 @@ func handleAll(args []string, output string) ([]ghsa.GHSAAdvisory, string, error
 	return advs, *o, err
 }
 
+// handleAuto handles input type auto-detection and maintains backward compatibility for legacy positional arguments.
 func handleAuto(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
 	fs := flag.NewFlagSet("auto", flag.ContinueOnError)
 	o := fs.String("o", output, "Output destination")
@@ -164,6 +169,7 @@ func handleAuto(args []string, output string) ([]ghsa.GHSAAdvisory, string, erro
 	return advs, *o, err
 }
 
+// runConversion iterates through fetched advisories, converts them to CSAF, and saves them to the specified output.
 func runConversion(advisories []ghsa.GHSAAdvisory, output string) {
 	outputBase := output
 	isDir := false
