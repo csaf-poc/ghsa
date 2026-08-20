@@ -178,6 +178,7 @@ go run cmd/main.go global GHSA-cpj6-fhp6-mr6j
 ```bash
 go run cmd/main.go repo golang-jwt/jwt GHSA-mh63-6h87-95cp -o specific.json
 ```
+(Outputs to `ghsa-mh63-6h87-95cp.json`)
 
 ### Batch Download (All from Repo)
 ```bash
@@ -211,6 +212,7 @@ A significant challenge in converting GHSA to CSAF is that **CVSS data is not ma
 - GHSA advisory ID → `document.tracking.id` and vulnerability IDs list.
 - CVE (if present) → `vulnerabilities[].cve`.
 - Package ecosystem/name → Product tree branches.
+- EPSS → Vulnerability note (if present in Global GHSA).
 - Severity / CVSS → `vulnerabilities[].scores[]` with score type set appropriately.
 - References (URLs) → `vulnerabilities[].references[]`.
 - Published / Updated timestamps → `document.tracking.revision_history[]` entries.
@@ -240,14 +242,10 @@ A more robust long‑term solution would be either (a) bypassing `gocsaf.SaveAdv
 ---
 ## Examples
 See `examples/` directory:
-- `global_GHSA/GHSA-cpj6-fhp6-mr6j.json` (global advisory input).
-- `repository_GHSA/GHSA-mh63-6h87-95cp.json` (repository advisory input).
+- `global_GHSA/GHSA-mh63-6h87-95cp.json` (original global GHSA input).
+- `global_GHSA/ghsa-mh63-6h87-95cp.json` (converted CSAF output with EPSS).
+- `repository_GHSA/GHSA-mh63-6h87-95cp.json` (original repository GHSA input).
 - `repository_GHSA/csaf_example_output.json` (sample converted CSAF output).
-
-You can diff the input vs. output to observe:
-- Product tree hierarchy creation.
-- Revision history entries.
-- Identifier and reference mappings.
 
 ---
 ## Troubleshooting
@@ -262,14 +260,15 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 
 ---
 ## Roadmap
-- [x] Support global GHSA (by ID and URL)
-- [x] Support repository advisory listings (batch processing)
+- [x] Support (single) repository GHSA
+- [x] Support (single) global GHSA
+- [x] Support fetching all repository GHSAs from a repositories
 - [x] Systematic output handling (file vs directory)
-- [x] Improved CLI with subcommands (`global`, `repo`, `all`)
-- [x] Subcommand aliases and auto-detection mode
-- [ ] Check hidden GHSA (requires authentication/GITHUB_TOKEN)
+- [x] Examine if using GraphQL would be benificial 
+- [x] Improve CLI with subcommands (`global`, `repo`, `all`)
 - [ ] Extensive review & additional tests
-- [ ] Optional: Retrieve all GHSAs from an organization
+- [ ] Optional: Retrivel all GHSAs from an organization
+- [ ] Optional: Check hidden GHSA (requires authentication/GITHUB_TOKEN)
 
 ---
 ## License and Acknowledgments

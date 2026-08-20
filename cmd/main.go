@@ -167,8 +167,10 @@ func handleAuto(args []string, output string) ([]ghsa.GHSAAdvisory, string, erro
 func runConversion(advisories []ghsa.GHSAAdvisory, output string) {
 	outputBase := output
 	isDir := false
-	if info, err := os.Stat(outputBase); err == nil && info.IsDir() {
-		isDir = true
+	if outputBase != "" {
+		if info, err := os.Stat(outputBase); err == nil && info.IsDir() {
+			isDir = true
+		}
 	}
 
 	successCount := 0
@@ -184,7 +186,11 @@ func runConversion(advisories []ghsa.GHSAAdvisory, output string) {
 
 		// Determine filename
 		var filename string
-		if isDir {
+		if outputBase == "" {
+			// Default output filename if not provided
+			filename = strings.ToLower(adv.GetGhsaID()) + ".json"
+		} else if isDir {
+			// Systematic directory output
 			filename = filepath.Join(outputBase, strings.ToLower(adv.GetGhsaID())+".json")
 		} else if len(advisories) > 1 {
 			// Batch into a new directory if it doesn't exist
@@ -222,4 +228,18 @@ func runConversion(advisories []ghsa.GHSAAdvisory, output string) {
 	slog.Info("Processing complete",
 		slog.Int("total", len(advisories)),
 		slog.Int("successful", successCount))
+}
+
+// checkInput validates CLI arguments and prints usage on mismatch.
+func checkInput() {
+	if length := len(os.Args); length < 2 || length > 3 {
+		fmt.Printf("Usage: %s <GHSA_URL> [file_name]\n", os.Args[0])
+		switch length {
+		case 1:
+			slog.Info("Provided no arguments at all")
+		default:
+			slog.Info("Provided too many arguments", slog.Any("Argument number", length-1))
+		}
+		os.Exit(1)
+	}
 }

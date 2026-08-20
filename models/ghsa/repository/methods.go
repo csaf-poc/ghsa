@@ -146,3 +146,7 @@ func (a *Advisory) GetPublisher() *ghsa.CommonUser {
 		HTMLURL: a.Publisher.HTMLURL,
 	}
 }
+
+func (a *Advisory) GetEPSS() *ghsa.CommonEPSS {
+	return nil
+}

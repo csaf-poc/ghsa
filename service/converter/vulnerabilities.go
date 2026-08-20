@@ -80,17 +80,23 @@ func getProductStatusScoresAndNotes(adv ghsa.GHSAAdvisory, productIDs csaf.Produ
 		}
 	}
 
+	if epss := adv.GetEPSS(); epss != nil {
+		notes = append(notes, &csaf.Note{
+			NoteCategory: utils.Ref(csaf.CSAFNoteCategoryOther),
+			Title:        utils.Ref("EPSS Score"),
+			Text:         utils.Ref(fmt.Sprintf("Exploit Prediction Scoring System (EPSS) score: %.5f (percentile: %.5f)", epss.Percentage, epss.Percentile)),
+		})
+	}
+
 	if isV4Only(adv) {
 		// v4 exists without a usable v3 source; keep score empty and document why.
 		slog.Warn("GHSA advisory only provides CVSS v4: Omitting vulnerability score to avoid lossy v4-to-v3 conversion",
 			slog.String("GHSA ID", adv.GetGhsaID()))
-		notes = csaf.Notes{
-			&csaf.Note{
-				NoteCategory: utils.Ref(csaf.CSAFNoteCategoryDescription),
-				Title:        utils.Ref("CVSS conversion limitation"),
-				Text:         utils.Ref("The advisory provides only CVSS v4 data. This converter currently exports only CVSS v3 vulnerability scores in CSAF 2.0, so the score was omitted to avoid lossy conversion."),
-			},
-		}
+		notes = append(notes, &csaf.Note{
+			NoteCategory: utils.Ref(csaf.CSAFNoteCategoryDescription),
+			Title:        utils.Ref("CVSS conversion limitation"),
+			Text:         utils.Ref("The advisory provides only CVSS v4 data. This converter currently exports only CVSS v3 vulnerability scores in CSAF 2.0, so the score was omitted to avoid lossy conversion."),
+		})
 	}
 
 	return

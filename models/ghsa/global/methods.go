@@ -131,3 +131,20 @@ func (a *Advisory) GetPublisher() *ghsa.CommonUser {
 		HTMLURL: "https://github.com",
 	}
 }
+
+func (a *Advisory) GetEPSS() *ghsa.CommonEPSS {
+	if a.EPSS == nil {
+		return nil
+	}
+	var percentage, percentile float64
+	if a.EPSS.Percentage != nil {
+		percentage = *a.EPSS.Percentage
+	}
+	if a.EPSS.Percentile != nil {
+		percentile = *a.EPSS.Percentile
+	}
+	return &ghsa.CommonEPSS{
+		Percentage: percentage,
+		Percentile: percentile,
+	}
+}
