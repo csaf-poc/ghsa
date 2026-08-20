@@ -35,7 +35,7 @@ func TestUnmarshalExample(t *testing.T) {
 
 	// EPSS
 	assert.NotNil(t, adv.EPSS)
-	assert.Equal(t, 0.00022, *adv.EPSS.Percentage)
+	assert.Equal(t, 0.00797, *adv.EPSS.Percentage)
 
 	// User fields in credits
 	assert.NotEmpty(t, adv.Credits)

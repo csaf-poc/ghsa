@@ -131,40 +131,64 @@ Development notes:
 ## Usage
 Prerequisites: Go ≥ 1.21.
 
-Run converter:
+The tool, referred to as `ghsaToCSAF`, provides a subcommand-based interface for clear intent, while maintaining a "smart" auto-detection mode for quick usage.
+
+### Basic Usage (Auto-detect)
 ```bash
-go run cmd/main.go <GHSA_INPUT> [OUTPUT_TARGET]
+go run cmd/main.go <INPUT> [OUTPUT]
+```
+- **`<INPUT>`**: Can be a GHSA ID (e.g., `GHSA-cpj6-fhp6-mr6j`), a repository (e.g., `golang-jwt/jwt`), or a full GitHub URL.
+- **`[OUTPUT]`**: Optional destination file or directory. If omitted, it defaults to `<ghsa-id>.json` for single advisories and an `advisories/` directory for batch processing.
+
+### Subcommands
+Use subcommands for explicit control over the fetch logic:
+
+#### 1. Global Advisory
+Fetch a global advisory from the GitHub Advisory Database by its ID or URL.
+```bash
+go run cmd/main.go global GHSA-cpj6-fhp6-mr6j
 ```
 
-`<GHSA_INPUT>` can be:
-- A single GHSA URL (browser or API).
-- A repository URL (browser, API, or bare `OWNER/REPO`) to fetch and convert **all** published advisories for that repository.
-
-`[OUTPUT_TARGET]` is optional and can be:
-- A filename (for a single advisory).
-- A directory (for batch processing repository listings). If the directory doesn't exist, it will be created. Filenames in batch mode are derived from the GHSA ID (lowercase).
-- **If omitted**, the output filename defaults to `<ghsa_id>.json` in the current directory (or a directory for batch mode).
-
-Supported URL formats (both repository and global):
-- Repository Listing: `https://github.com/OWNER/REPO`, `OWNER/REPO`, `https://github.com/OWNER/REPO/security/advisories`
-- Repository Browser: `https://github.com/OWNER/REPO/security/advisories/GHSA-XXXX-XXXX-XXXX`
-- Global Browser:     `https://github.com/advisories/GHSA-XXXX-XXXX-XXXX`
-- API equivalents for all the above.
-
-Example (single):
+#### 2. Repository Advisory
+Fetch a specific security advisory from a repository.
 ```bash
-go run cmd/main.go https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp
+go run cmd/main.go repo golang-jwt/jwt GHSA-mh63-6h87-95cp
+```
+
+#### 3. All Advisories from Repository
+Fetch all published security advisories for a given repository.
+```bash
+go run cmd/main.go all golang-jwt/jwt -o ./my_advisories
+```
+*Aliases: `allOfRepository`, `list`.*
+
+### Global Flags
+- **`-o <path>`**: Explicitly set the output file or directory. This flag can be placed both before the subcommand (`ghsa -o out.json global ...`) and after it (`ghsa global -o out.json ...`).
+- **`-h, --help`**: Display the help message and examples.
+
+---
+## Examples
+### Single Advisory (Global)
+```bash
+go run cmd/main.go global GHSA-cpj6-fhp6-mr6j
+# Saves to ghsa-cpj6-fhp6-mr6j.json
+```
+
+### Single Advisory (Repository)
+```bash
+go run cmd/main.go repo golang-jwt/jwt GHSA-mh63-6h87-95cp -o specific.json
 ```
 (Outputs to `ghsa-mh63-6h87-95cp.json`)
 
-Example (batch repository):
+### Batch Download (All from Repo)
 ```bash
-go run cmd/main.go https://github.com/golang-jwt/jwt advisories_output/
+go run cmd/main.go all golang-jwt/jwt
+# Saves all advisories into the 'advisories/' directory
 ```
 
-Validate output against the CSAF 2.0 schema:
+### Auto-detection (URL)
 ```bash
-python3 scripts/validate.py ghsa-mh63-6h87-95cp.json
+go run cmd/main.go https://github.com/advisories/GHSA-cpj6-fhp6-mr6j
 ```
 
 ---
@@ -241,7 +265,7 @@ Logging: converter emits structured logs (via `slog`) for save operations; enabl
 - [x] Support fetching all repository GHSAs from a repositories
 - [x] Systematic output handling (file vs directory)
 - [x] Examine if using GraphQL would be benificial 
-- [ ] CLI with flags (currently in the experimental phase)
+- [x] Improve CLI with subcommands (`global`, `repo`, `all`)
 - [ ] Extensive review & additional tests
 - [ ] Optional: Retrivel all GHSAs from an organization
 - [ ] Optional: Check hidden GHSA (requires authentication/GITHUB_TOKEN)
