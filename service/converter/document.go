@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/csaf-poc/ghsa/internal/config"
 	"github.com/csaf-poc/ghsa/internal/utils"
 	"github.com/csaf-poc/ghsa/models/csaf"
 	"github.com/csaf-poc/ghsa/models/ghsa"
@@ -12,21 +13,24 @@ import (
 )
 
 // getDocument builds the CSAF Document section from a GHSA advisory
-func getDocument(adv ghsa.GHSAAdvisory) (doc *csaf.Document, err error) {
-	publisher := adv.GetPublisher()
+func getDocument(adv ghsa.GHSAAdvisory, cfg *config.Config) (doc *csaf.Document, err error) {
+	var override *config.Publisher
+	if cfg != nil {
+		override = cfg.Publisher
+	}
 	doc = &csaf.Document{
 		Acknowledgements:  getAcknowledgements(adv),
-		AggregateSeverity: getSeverity(adv),        // not required. n/a in GHSA
-		Category:          getCategory(),           // required
-		CSAFVersion:       getVersion(),            // required
-		Distribution:      getDistribution(),       // not required
-		Lang:              getLang(adv),            // not required. No language info in GHSA, default to "en"
-		Notes:             getNotes(adv),           // not required
-		Publisher:         getPublisher(publisher), // required
-		References:        nil,                     // not required.
-		SourceLang:        nil,                     // not required.
-		Title:             getTitle(adv),           // required
-		Tracking:          getTracking(adv),        // required
+		AggregateSeverity: getSeverity(adv),                           // not required. n/a in GHSA
+		Category:          getCategory(),                              // required
+		CSAFVersion:       getVersion(),                               // required
+		Distribution:      getDistribution(),                          // not required
+		Lang:              getLang(adv),                               // not required. No language info in GHSA, default to "en"
+		Notes:             getNotes(adv),                              // not required
+		Publisher:         getPublisher(adv.GetPublisher(), override), // required
+		References:        nil,                                        // not required.
+		SourceLang:        nil,                                        // not required.
+		Title:             getTitle(adv),                              // required
+		Tracking:          getTracking(adv),                           // required
 	}
 	return
 }
@@ -157,23 +161,41 @@ func getNotes(adv ghsa.GHSAAdvisory) (notes gocsaf.Notes) {
 	return
 }
 
-// getPublisher maps GHSA publisher user to CSAF publisher metadata
-func getPublisher(ghsapublisher *ghsa.CommonUser) (p *gocsaf.DocumentPublisher) {
-	if ghsapublisher == nil {
+// getPublisher maps the GHSA publisher (repository owner, or GitHub for global advisories) to
+// CSAF publisher metadata. Without a config we cannot know the relationship between the
+// converting party and the product, so the category defaults to "other". Every non-empty
+// field of override replaces the derived value.
+func getPublisher(ghsapublisher *ghsa.CommonUser, override *config.Publisher) (p *gocsaf.DocumentPublisher) {
+	if ghsapublisher == nil && override == nil {
 		return nil
 	}
-	var (
-		category         = gocsaf.CSAFCategoryDiscoverer // Assumption: Discoverer is the correct publisher category
-		name             = ghsapublisher.Login           // We use Login because it is required while name isn't
-		issuingAuthority = "GitHub"                      // Assumption: GitHub is the issuing authority
-	)
 
 	p = &gocsaf.DocumentPublisher{
-		Category:         &category,                                // required
-		ContactDetails:   provideContactInformation(ghsapublisher), // not required
-		IssuingAuthority: &issuingAuthority,                        // not required
-		Name:             &name,                                    // required
-		Namespace:        &ghsapublisher.HTMLURL,                   // required. Assumption: HTMLURL fulfills the namespace requirement
+		Category: utils.Ref(gocsaf.CSAFCategoryOther), // required
+	}
+	if ghsapublisher != nil {
+		p.ContactDetails = provideContactInformation(ghsapublisher) // not required
+		p.Name = utils.Ref(ghsapublisher.Login)                     // required. We use Login because it is required while name isn't
+		p.Namespace = utils.Ref(ghsapublisher.HTMLURL)              // required. Assumption: HTMLURL fulfills the namespace requirement
+	}
+
+	if override == nil {
+		return
+	}
+	if override.Category != "" {
+		p.Category = utils.Ref(gocsaf.Category(override.Category))
+	}
+	if override.Name != "" {
+		p.Name = utils.Ref(override.Name)
+	}
+	if override.Namespace != "" {
+		p.Namespace = utils.Ref(override.Namespace)
+	}
+	if override.ContactDetails != "" {
+		p.ContactDetails = utils.Ref(override.ContactDetails)
+	}
+	if override.IssuingAuthority != "" {
+		p.IssuingAuthority = utils.Ref(override.IssuingAuthority)
 	}
 	return
 }

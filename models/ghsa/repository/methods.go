@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/csaf-poc/ghsa/models/ghsa"
@@ -137,7 +139,16 @@ func (a *Advisory) GetCredits() []ghsa.CommonCredit {
 	return credits
 }
 
+// GetPublisher returns the owner of the repository the advisory belongs to (e.g. golang-jwt),
+// since the advisory is issued on behalf of the project, not the maintainer who clicked publish.
+// It falls back to the publishing user if the owner cannot be derived from the advisory URL.
 func (a *Advisory) GetPublisher() *ghsa.CommonUser {
+	if owner, base := repositoryOwner(a.HTMLURL); owner != "" {
+		return &ghsa.CommonUser{
+			Login:   owner,
+			HTMLURL: base + "/" + owner,
+		}
+	}
 	if a.Publisher == nil {
 		return nil
 	}
@@ -145,6 +156,17 @@ func (a *Advisory) GetPublisher() *ghsa.CommonUser {
 		Login:   a.Publisher.Login,
 		HTMLURL: a.Publisher.HTMLURL,
 	}
+}
+
+// repositoryOwner extracts the owner from an advisory URL such as
+// https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp.
+func repositoryOwner(htmlURL string) (owner, base string) {
+	u, err := url.Parse(htmlURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return "", ""
+	}
+	owner, _, _ = strings.Cut(strings.Trim(u.Path, "/"), "/")
+	return owner, u.Scheme + "://" + u.Host
 }
 
 func (a *Advisory) GetEPSS() *ghsa.CommonEPSS {

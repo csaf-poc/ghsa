@@ -65,11 +65,11 @@ REST is chosen as the primary API because it provides first-class support for re
 | Distribution (TLP)           | n/a                                            | `document.distribution`                              | Set TLP to White by default                                                                                      |
 | Language (`lang`)            | n/a                                            | Optional                                             | Default to `en` (GHSA does not provide language)                                                                 |
 | Notes                        | `summary`, `description`                       | Optional `notes[]`                                   | Two notes created: Summary + Description                                                                         |
-| Publisher: Category          | n/a                                            | Category (e.g., coordinator/discovery/other)         | Use `Discoverer`                                                                                                 |
-| Publisher: Issuing Authority | n/a                                            | Issuer                                               | Use `GitHub`                                                                                                     |
-| Publisher: Name              | `user.login`, `user.name`                      | Single name                                          | Use `login` because it is always set                                                                             |
-| Publisher: Namespace         | `user.html_url`                                | URI/namespace                                        | Use HTMLURL as namespace                                                                                         |
-| Publisher: Contact details   | `user.html_url`, optional `user.email`         | Optional contact string                              | Compose: `URL: <html_url>; email: <email>` if present                                                            |
+| Publisher: Category          | n/a                                            | Category (e.g., coordinator/discovery/other)         | Use `other` (the converting party's relation to the product is unknown); override via `--config`               |
+| Publisher: Issuing Authority | n/a                                            | Issuer                                               | Not populated; can be set via `--config`                                                                         |
+| Publisher: Name              | repository owner / `github` (global)           | Single name                                          | Repository owner from `html_url` (e.g. `golang-jwt`), `github` for global advisories; override via `--config`   |
+| Publisher: Namespace         | repository owner / `github` (global)           | URI/namespace                                        | Owner URL (e.g. `https://github.com/golang-jwt`) or `https://github.com`; override via `--config`               |
+| Publisher: Contact details   | owner URL                                      | Optional contact string                              | `URL: <owner url>`; override via `--config`                                                                      |
 | References                   | URLs in GHSA body                              | Optional references array                            | Not populated                                                                                                 |
 | Source language              | n/a                                            | Optional                                             | Not populated                                                                                                    |
 | Title                        | `summary`                                      | Required                                             | Use `summary`; nil if empty                                                                                      |
@@ -102,7 +102,7 @@ REST is chosen as the primary API because it provides first-class support for re
 | CWE mapping | `cwes[]` | One CWE per vulnerability       | Map first CWE (`id` and `name`), omit others. |
 | References | Advisory URL (`html_url`) | Typed references                | One external reference pointing to GHSA HTML page with summary "Advisory HTML URL". |
 | Product status | Affected packages | `known_affected`, `fixed`, etc. | All products derived from product tree marked as `KnownAffected`; no unaffected or fixed breakdown yet. |
-| Scores (CVSS) | `cvss_severities`, `cvss` legacy | CVSS3 with version              | Source precedence: `cvss_severities.cvss_v3` first, then legacy `cvss`. If only meaningful `cvss_v4` exists, no CVSS score is emitted (to avoid lossy v4->v3 projection), a warning is logged, and a vulnerability note is added. Severity for emitted CVSS v3 remains derived from base score. |
+| Scores (CVSS) | `cvss_severities`, `cvss` legacy | CVSS3 with version              | Source precedence: `cvss_severities.cvss_v3` first, then legacy `cvss`. If only meaningful `cvss_v4` exists, no CVSS score is emitted (to avoid lossy v4->v3 projection), a warning is logged, and a vulnerability note is added. The base score is computed from the vector (via `pandatix/go-cvss`) rather than copied from GHSA; a warning is logged if they differ. Severity for emitted CVSS v3 remains derived from base score. |
 | Remediations | `patched_versions` per vulnerability | Remediation entries             | If patched versions exist, one `VendorFix` remediation with details "Upgrade to version: <versions>" and product IDs attached. |
 | Discovery / release dates | Not distinct in GHSA | Optional fields                 | Omitted; document tracking covers publish/update. |
 | Threats / VEX flags | Not present | Optional                        | Omitted. |
@@ -164,6 +164,19 @@ go run cmd/main.go all golang-jwt/jwt -o ./my_advisories
 
 ### Global Flags
 - **`-o <path>`**: Explicitly set the output file or directory. This flag can be placed both before the subcommand (`ghsa -o out.json global ...`) and after it (`ghsa global -o out.json ...`).
+- **`--config <file>`**: Optional JSON config. Currently it overrides the CSAF publisher; every non-empty field replaces the value derived from the advisory. Like `-o`, it can be placed before or after the subcommand.
+
+  ```json
+  {
+    "publisher": {
+      "category": "vendor",
+      "name": "golang-jwt project",
+      "namespace": "https://github.com/golang-jwt",
+      "contact_details": "security@example.org",
+      "issuing_authority": "..."
+    }
+  }
+  ```
 - **`-h, --help`**: Display the help message and examples.
 
 ---

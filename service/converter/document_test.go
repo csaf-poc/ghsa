@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/csaf-poc/ghsa/internal/config"
 	"github.com/csaf-poc/ghsa/internal/utils"
 	"github.com/csaf-poc/ghsa/models/ghsa/repository"
 	gocsaf "github.com/gocsaf/csaf/v3/csaf"
@@ -83,5 +84,46 @@ func Test_getAcknowledgements_FallsBackToCredits(t *testing.T) {
 	}
 	if (*ack)[0].Summary == nil || *(*ack)[0].Summary != "Reported the vulnerability" {
 		t.Fatalf("unexpected fallback acknowledgement summary: %#v", (*ack)[0].Summary)
+	}
+}
+
+func Test_getPublisher_RepositoryDefaultsToOwnerAndOther(t *testing.T) {
+	adv := &repository.Advisory{
+		HTMLURL:   "https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp",
+		Publisher: &repository.User{Login: "oxisto", HTMLURL: "https://github.com/oxisto"},
+	}
+
+	p := getPublisher(adv.GetPublisher(), nil)
+	if *p.Name != "golang-jwt" || *p.Namespace != "https://github.com/golang-jwt" {
+		t.Errorf("got name=%v namespace=%v, want golang-jwt / https://github.com/golang-jwt", *p.Name, *p.Namespace)
+	}
+	if *p.Category != gocsaf.CSAFCategoryOther {
+		t.Errorf("category = %v, want other", *p.Category)
+	}
+	if p.IssuingAuthority != nil {
+		t.Errorf("issuing authority = %v, want unset", *p.IssuingAuthority)
+	}
+}
+
+func Test_getPublisher_ConfigOverrides(t *testing.T) {
+	adv := &repository.Advisory{
+		HTMLURL: "https://github.com/golang-jwt/jwt/security/advisories/GHSA-mh63-6h87-95cp",
+	}
+	override := &config.Publisher{
+		Category:         "vendor",
+		Name:             "golang-jwt maintainers",
+		IssuingAuthority: "Maintained by the golang-jwt project",
+	}
+
+	p := getPublisher(adv.GetPublisher(), override)
+	if *p.Category != gocsaf.CSAFCategoryVendor || *p.Name != "golang-jwt maintainers" {
+		t.Errorf("got category=%v name=%v, want overrides", *p.Category, *p.Name)
+	}
+	// Namespace isn't overridden and must stay derived.
+	if *p.Namespace != "https://github.com/golang-jwt" {
+		t.Errorf("namespace = %v, want derived value", *p.Namespace)
+	}
+	if p.IssuingAuthority == nil || *p.IssuingAuthority != override.IssuingAuthority {
+		t.Errorf("issuing authority = %v, want %q", p.IssuingAuthority, override.IssuingAuthority)
 	}
 }

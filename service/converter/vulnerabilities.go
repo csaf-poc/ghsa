@@ -137,7 +137,7 @@ func getCVE(adv ghsa.GHSAAdvisory) (cve *csaf.CVE) {
 
 // convertScores converts GHSA CVSS into CSAF CVSS v3 only.
 func convertScores(adv ghsa.GHSAAdvisory, productIDs csaf.Products) (*csaf.Score, error) {
-	vector, scoreVal := adv.GetCVSSv3()
+	vector, ghsaScore := adv.GetCVSSv3()
 	if vector == "" {
 		return nil, nil
 	}
@@ -151,6 +151,19 @@ func convertScores(adv ghsa.GHSAAdvisory, productIDs csaf.Products) (*csaf.Score
 	} else {
 		// Reject non-3.x vectors (e.g., v2/v4) instead of coercing them into cvss_v3.
 		return nil, fmt.Errorf("unsupported or invalid CVSS vector: %s", vector)
+	}
+
+	// The base score is derived from the vector; the GHSA score is only used for a consistency check.
+	scoreVal, err := cvss3BaseScore(vector)
+	if err != nil {
+		return nil, err
+	}
+	if ghsaScore != 0 && ghsaScore != scoreVal {
+		slog.Warn("GHSA CVSS score does not match its vector, using computed score",
+			slog.String("GHSA ID", adv.GetGhsaID()),
+			slog.String("vector", vector),
+			slog.Float64("GHSA score", ghsaScore),
+			slog.Float64("computed score", scoreVal))
 	}
 
 	return &csaf.Score{

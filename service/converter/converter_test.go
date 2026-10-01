@@ -29,7 +29,7 @@ func Test_ToCSAF_Minimal(t *testing.T) {
 			VulnerableVersionRange: utils.Ref("<=1.2.3"),
 		}},
 	}
-	csafAdv, err := ToCSAF(adv)
+	csafAdv, err := ToCSAF(adv, nil)
 	if err != nil {
 		t.Fatalf("ToCSAF returned error: %v", err)
 	}
@@ -50,7 +50,7 @@ func Test_ToCSAF_Global_Example(t *testing.T) {
 		t.Fatalf("failed to unmarshal global advisory: %v", err)
 	}
 
-	csafAdv, err := ToCSAF(&g)
+	csafAdv, err := ToCSAF(&g, nil)
 	if err != nil {
 		t.Fatalf("ToCSAF returned error: %v", err)
 	}

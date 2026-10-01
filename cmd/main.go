@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/csaf-poc/ghsa/internal/config"
 	"github.com/csaf-poc/ghsa/models/ghsa"
 	"github.com/csaf-poc/ghsa/service/converter"
 	"github.com/csaf-poc/ghsa/service/downloader"
@@ -29,17 +30,36 @@ func printUsage() {
 	fmt.Fprintf(os.Stderr, "  all  -> allOfRepository\n\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	fmt.Fprintf(os.Stderr, "  -o <path>                   Output file or directory (default: <ID>.json or advisories/)\n")
+	fmt.Fprintf(os.Stderr, "  --config <file>             JSON config, e.g. {\"publisher\": {\"category\": \"vendor\", \"name\": ...}}\n")
 	fmt.Fprintf(os.Stderr, "  -h, --help                  Show this help message\n\n")
 	fmt.Fprintf(os.Stderr, "Examples:\n")
 	fmt.Fprintf(os.Stderr, "  ghsaToCSAF global GHSA-cpj6-fhp6-mr6j\n")
 	fmt.Fprintf(os.Stderr, "  ghsaToCSAF repo golang-jwt/jwt GHSA-mh63-6h87-95cp\n")
 	fmt.Fprintf(os.Stderr, "  ghsaToCSAF all golang-jwt/jwt -o ./jwt-advisories\n")
+	fmt.Fprintf(os.Stderr, "  ghsaToCSAF --config publisher.json repo golang-jwt/jwt GHSA-mh63-6h87-95cp\n")
 	fmt.Fprintf(os.Stderr, "  ghsaToCSAF https://github.com/advisories/GHSA-cpj6-fhp6-mr6j\n")
+}
+
+// options holds the flags that are accepted both before and after the subcommand.
+type options struct {
+	output string
+	config string
+}
+
+// parseFlags parses the subcommand arguments, using values given before the subcommand as defaults.
+func parseFlags(name string, args []string, opts *options) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.StringVar(&opts.output, "o", opts.output, "Output destination")
+	fs.StringVar(&opts.config, "config", opts.config, "Path to JSON config file")
+	fs.Parse(args)
+	return fs
 }
 
 func main() {
 	// Root flags
-	outputFlag := flag.String("o", "", "Output destination")
+	var opts options
+	flag.StringVar(&opts.output, "o", "", "Output destination")
+	flag.StringVar(&opts.config, "config", "", "Path to JSON config file")
 	flag.Usage = printUsage
 	flag.Parse()
 
@@ -51,31 +71,47 @@ func main() {
 	command := flag.Arg(0)
 	remainingArgs := flag.Args()[1:]
 
-	var advisories []ghsa.GHSAAdvisory
+	var input string
 	var err error
-	output := *outputFlag
 
 	switch strings.ToLower(command) {
 	case "global":
-		advisories, output, err = handleGlobal(remainingArgs, output)
+		input, err = handleGlobal(remainingArgs, &opts)
 	case "repository", "repo":
-		advisories, output, err = handleRepository(remainingArgs, output)
+		input, err = handleRepository(remainingArgs, &opts)
 	case "allofrepository", "all", "list":
-		advisories, output, err = handleAll(remainingArgs, output)
+		input, err = handleAll(remainingArgs, &opts)
 	case "auto":
-		advisories, output, err = handleAuto(remainingArgs, output)
+		input, err = handleAuto(remainingArgs, &opts)
 	case "help":
 		printUsage()
 		os.Exit(0)
 	default:
 		// Use auto-detection for anything else
-		advisories, output, err = handleAuto(flag.Args(), output)
+		input, err = handleAuto(flag.Args(), &opts)
 	}
 
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Load the config before downloading so that a broken config fails fast.
+	var cfg *config.Config
+	if opts.config != "" {
+		cfg, err = config.Load(opts.config)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	advisories, err := downloader.FetchAdvisories(input)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+	output := opts.output
 
 	if len(advisories) == 0 {
 		slog.Warn("No advisories found")
@@ -92,31 +128,25 @@ func main() {
 		slog.Info("No output specified, using default", slog.String("output", output))
 	}
 
-	runConversion(advisories, output)
+	runConversion(advisories, output, cfg)
 }
 
 // handleGlobal handles the 'global' subcommand to fetch a specific advisory from the global GitHub database.
-func handleGlobal(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
-	fs := flag.NewFlagSet("global", flag.ContinueOnError)
-	o := fs.String("o", output, "Output destination")
-	fs.Parse(args)
+func handleGlobal(args []string, opts *options) (string, error) {
+	fs := parseFlags("global", args, opts)
 
 	if fs.NArg() < 1 {
-		return nil, "", fmt.Errorf("global command requires an ID or URL")
+		return "", fmt.Errorf("global command requires an ID or URL")
 	}
-	input := fs.Arg(0)
-	advs, err := downloader.FetchAdvisories(input)
-	return advs, *o, err
+	return fs.Arg(0), nil
 }
 
 // handleRepository handles the 'repository' subcommand to fetch a specific security advisory from a repository.
-func handleRepository(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
-	fs := flag.NewFlagSet("repository", flag.ContinueOnError)
-	o := fs.String("o", output, "Output destination")
-	fs.Parse(args)
+func handleRepository(args []string, opts *options) (string, error) {
+	fs := parseFlags("repository", args, opts)
 
 	if fs.NArg() < 1 {
-		return nil, "", fmt.Errorf("repository command requires at least <owner/repo>")
+		return "", fmt.Errorf("repository command requires at least <owner/repo>")
 	}
 
 	repo := fs.Arg(0)
@@ -131,46 +161,38 @@ func handleRepository(args []string, output string) ([]ghsa.GHSAAdvisory, string
 		}
 	}
 
-	advs, err := downloader.FetchAdvisories(input)
-	return advs, *o, err
+	return input, nil
 }
 
 // handleAll handles the 'allOfRepository' subcommand to fetch all published advisories for a given repository.
-func handleAll(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
-	fs := flag.NewFlagSet("allOfRepository", flag.ContinueOnError)
-	o := fs.String("o", output, "Output destination")
-	fs.Parse(args)
+func handleAll(args []string, opts *options) (string, error) {
+	fs := parseFlags("allOfRepository", args, opts)
 
 	if fs.NArg() < 1 {
-		return nil, "", fmt.Errorf("allOfRepository command requires <owner/repo>")
+		return "", fmt.Errorf("allOfRepository command requires <owner/repo>")
 	}
-	input := fs.Arg(0)
-	advs, err := downloader.FetchAdvisories(input)
-	return advs, *o, err
+	return fs.Arg(0), nil
 }
 
 // handleAuto handles input type auto-detection and maintains backward compatibility for legacy positional arguments.
-func handleAuto(args []string, output string) ([]ghsa.GHSAAdvisory, string, error) {
-	fs := flag.NewFlagSet("auto", flag.ContinueOnError)
-	o := fs.String("o", output, "Output destination")
-	fs.Parse(args)
+func handleAuto(args []string, opts *options) (string, error) {
+	fs := parseFlags("auto", args, opts)
 
 	if fs.NArg() < 1 {
-		return nil, "", fmt.Errorf("no input provided")
+		return "", fmt.Errorf("no input provided")
 	}
 
 	// In auto mode, we might have ghsa <input> <output> for legacy support
 	input := fs.Arg(0)
-	if *o == "" && fs.NArg() >= 2 {
-		*o = fs.Arg(1)
+	if opts.output == "" && fs.NArg() >= 2 {
+		opts.output = fs.Arg(1)
 	}
 
-	advs, err := downloader.FetchAdvisories(input)
-	return advs, *o, err
+	return input, nil
 }
 
 // runConversion iterates through fetched advisories, converts them to CSAF, and saves them to the specified output.
-func runConversion(advisories []ghsa.GHSAAdvisory, output string) {
+func runConversion(advisories []ghsa.GHSAAdvisory, output string, cfg *config.Config) {
 	outputBase := output
 	isDir := false
 	if outputBase != "" {
@@ -182,7 +204,7 @@ func runConversion(advisories []ghsa.GHSAAdvisory, output string) {
 	successCount := 0
 	for _, adv := range advisories {
 		// Convert GHSA to CSAF
-		csafa, err := converter.ToCSAF(adv)
+		csafa, err := converter.ToCSAF(adv, cfg)
 		if err != nil {
 			slog.Error("Error converting GHSA to CSAF",
 				slog.String("GHSA ID", adv.GetGhsaID()),

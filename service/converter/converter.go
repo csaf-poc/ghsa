@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/csaf-poc/ghsa/internal/config"
 	"github.com/csaf-poc/ghsa/models/csaf"
 	"github.com/csaf-poc/ghsa/models/ghsa"
 )
@@ -11,7 +12,8 @@ import (
 const documentCategory = "GitHub Security Advisory"
 
 // ToCSAF converts a GHSA Advisory into a CSAF Advisory aggregating document, product tree and vulnerabilities.
-func ToCSAF(adv ghsa.GHSAAdvisory) (csafadvisory *csaf.Advisory, err error) {
+// cfg is optional and may be nil.
+func ToCSAF(adv ghsa.GHSAAdvisory, cfg *config.Config) (csafadvisory *csaf.Advisory, err error) {
 	var (
 		d  *csaf.Document
 		pt *csaf.ProductTree
@@ -23,7 +25,7 @@ func ToCSAF(adv ghsa.GHSAAdvisory) (csafadvisory *csaf.Advisory, err error) {
 	// Each step must return on error: the later steps consume the earlier results
 	// (getVulnerabilities dereferences the product tree), so continuing after a
 	// failure would panic instead of surfacing the error.
-	d, err = getDocument(adv)
+	d, err = getDocument(adv, cfg)
 	if err != nil {
 		err = fmt.Errorf("could not extract csaf document: %v", err)
 		return
